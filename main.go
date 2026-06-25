@@ -123,8 +123,8 @@ func (s *extProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			} else {
 				log.Println("\t\tApproved payload\n")
 				resp = &extProcPb.ProcessingResponse{
-					Response: &extProcPb.ProcessingResponse_RequestBody{
-						RequestBody: &extProcPb.BodyResponse{},
+					Response: &extProcPb.ProcessingResponse_ResponseBody{
+						ResponseBody: &extProcPb.BodyResponse{},
 					},
 				}
 			}
