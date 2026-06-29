@@ -1,12 +1,12 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
 	"strings"
-	"flag"
-	"fmt"
 
 	extProcPb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
@@ -37,21 +37,37 @@ func (s *extProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		case *extProcPb.ProcessingRequest_RequestHeaders:
 			log.Println("\tRequest Headers")
-			for _, header := range payload.RequestHeaders.Headers.Headers {
-				val := string(header.RawValue)
-				if val == "" { 
-					val = header.Value
-				}
-
-				log.Printf("\t\t%s: %s", header.Key, val)
-			}
-			log.Println("\n")
 
 			resp = &extProcPb.ProcessingResponse{
 				Response: &extProcPb.ProcessingResponse_RequestHeaders{
 					RequestHeaders: &extProcPb.HeadersResponse{},
 				},
 			}
+
+			for _, header := range payload.RequestHeaders.Headers.Headers {
+				val := string(header.RawValue)
+				if val == "" {
+					val = header.Value
+				}
+
+				log.Printf("\t\t%s: %s", header.Key, val)
+
+				if strings.Contains(strings.ToLower(val), "malicious") || strings.Contains(strings.ToLower(header.Key), "malicious") {
+					resp = &extProcPb.ProcessingResponse{
+						Response: &extProcPb.ProcessingResponse_ImmediateResponse{
+							ImmediateResponse: &extProcPb.ImmediateResponse{
+								Status: &typev3.HttpStatus{
+									Code: typev3.StatusCode_Forbidden,
+								},
+								Body: []byte("Blocked by AAPH Guardrail: Policy Violation."),
+							},
+						},
+					}
+					break
+				}
+			}
+
+			log.Println("\n")
 
 		case *extProcPb.ProcessingRequest_RequestBody:
 			bodyStr := string(payload.RequestBody.Body)
@@ -84,21 +100,37 @@ func (s *extProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		case *extProcPb.ProcessingRequest_ResponseHeaders:
 			log.Println("\tResponse Headers")
-			for _, header := range payload.ResponseHeaders.Headers.Headers {
-				val := string(header.RawValue)
-				if val == "" { 
-					val = header.Value
-				}
-
-				log.Printf("\t\t%s: %s", header.Key, val)
-			}
-			log.Println("\n")
 
 			resp = &extProcPb.ProcessingResponse{
 				Response: &extProcPb.ProcessingResponse_ResponseHeaders{
 					ResponseHeaders: &extProcPb.HeadersResponse{},
 				},
 			}
+
+			for _, header := range payload.ResponseHeaders.Headers.Headers {
+				val := string(header.RawValue)
+				if val == "" {
+					val = header.Value
+				}
+
+				log.Printf("\t\t%s: %s", header.Key, val)
+
+				if strings.Contains(strings.ToLower(val), "malicious") || strings.Contains(strings.ToLower(header.Key), "malicious") {
+					resp = &extProcPb.ProcessingResponse{
+						Response: &extProcPb.ProcessingResponse_ImmediateResponse{
+							ImmediateResponse: &extProcPb.ImmediateResponse{
+								Status: &typev3.HttpStatus{
+									Code: typev3.StatusCode_Forbidden,
+								},
+								Body: []byte("Blocked by AAPH Guardrail: Policy Violation."),
+							},
+						},
+					}
+					break
+				}
+			}
+
+			log.Println("\n")
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
 			bodyStr := string(payload.ResponseBody.Body)
