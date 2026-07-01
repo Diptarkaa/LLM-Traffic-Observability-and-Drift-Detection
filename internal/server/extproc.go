@@ -27,17 +27,17 @@ func NewExtProcServer(insp inspector.Inspector) *ExtProcServer {
 // Process handles the gRPC stream.
 // Envoy sends request/response body/header, and the server replies with actions (allow, block, modify).
 func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer) error {
-	log.Println("\nNew gRPC stream opened by Envoy")
+	log.Println("New gRPC stream opened by Envoy")
 
 	// Continuously read messages from the stream until closed.
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			log.Println("\ngRPC stream closed by Envoy")
+			log.Println("gRPC stream closed by Envoy")
 			return nil
 		}
 		if err != nil {
-			log.Printf("gRPC stream error: %v\n", err)
+			log.Printf("gRPC stream error: %v", err)
 			return err
 		}
 
@@ -47,7 +47,7 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 		switch payload := req.Request.(type) {
 
 		case *extProcPb.ProcessingRequest_RequestHeaders:
-			log.Println("\tRequest Headers")
+			log.Println("Processing Request Headers")
 			var headerStr strings.Builder
 
 			// Reconstruct headers into a single string for inspection.
@@ -58,15 +58,16 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 				}
 				headerStr.WriteString(fmt.Sprintf("%s: %s\n", header.Key, val))
 			}
-			log.Println(headerStr.String())
 
-			result := s.inspector.Inspect(inspector.RequestHeader, headerStr.String())
+			headersContent := strings.TrimSpace(headerStr.String())
+			log.Printf("Request Headers Content:\n%s", headersContent)
+			result := s.inspector.Inspect(inspector.RequestHeader, headersContent)
 
 			if result.IsBlocked {
-				log.Println("\t\tBlocked Malicious Request Headers")
+				log.Println("Verdict: Blocked (Malicious Request Headers)")
 				resp = buildBlockResponse(result.Message)
 			} else {
-				log.Println("\t\tApproved Request Headers")
+				log.Println("Verdict: Approved (Request Headers)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_RequestHeaders{
 						RequestHeaders: &extProcPb.HeadersResponse{},
@@ -75,17 +76,17 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			}
 
 		case *extProcPb.ProcessingRequest_RequestBody:
-			log.Println("\tRequest Body")
+			log.Println("Processing Request Body")
 			bodyStr := string(payload.RequestBody.Body)
-			log.Println(bodyStr)
+			log.Printf("Request Body Content: %s", bodyStr)
 
 			result := s.inspector.Inspect(inspector.RequestBody, bodyStr)
 
 			if result.IsBlocked {
-				log.Println("\t\tBlocked Malicious Request Body")
+				log.Println("Verdict: Blocked (Malicious Request Body)")
 				resp = buildBlockResponse(result.Message)
 			} else {
-				log.Println("\t\tApproved Request Body")
+				log.Println("Verdict: Approved (Request Body)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_RequestBody{
 						RequestBody: &extProcPb.BodyResponse{},
@@ -94,7 +95,7 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			}
 
 		case *extProcPb.ProcessingRequest_ResponseHeaders:
-			log.Println("\tResponse Headers")
+			log.Println("Processing Response Headers")
 			var headerStr strings.Builder
 
 			// Reconstruct headers into a single string for inspection.
@@ -105,15 +106,16 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 				}
 				headerStr.WriteString(fmt.Sprintf("%s: %s\n", header.Key, val))
 			}
-			log.Println(headerStr.String())
 
-			result := s.inspector.Inspect(inspector.ResponseHeader, headerStr.String())
+			headersContent := strings.TrimSpace(headerStr.String())
+			log.Printf("Response Headers Content:\n%s", headersContent)
+			result := s.inspector.Inspect(inspector.ResponseHeader, headersContent)
 
 			if result.IsBlocked {
-				log.Println("\t\tBlocked Malicious Response Headers")
+				log.Println("Verdict: Blocked (Malicious Response Headers)")
 				resp = buildBlockResponse(result.Message)
 			} else {
-				log.Println("\t\tApproved Response Headers")
+				log.Println("Verdict: Approved (Response Headers)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_ResponseHeaders{
 						ResponseHeaders: &extProcPb.HeadersResponse{},
@@ -122,17 +124,17 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			}
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
-			log.Println("\tResponse Body")
+			log.Println("Processing Response Body")
 			bodyStr := string(payload.ResponseBody.Body)
-			log.Println(bodyStr)
+			log.Printf("Response Body Content: %s", bodyStr)
 
 			result := s.inspector.Inspect(inspector.ResponseBody, bodyStr)
 
 			if result.IsBlocked {
-				log.Println("\t\tBlocked Malicious Response Body")
+				log.Println("Verdict: Blocked (Malicious Response Body)")
 				resp = buildBlockResponse(result.Message)
 			} else {
-				log.Println("\t\tApproved Response Body")
+				log.Println("Verdict: Approved (Response Body)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_ResponseBody{
 						ResponseBody: &extProcPb.BodyResponse{},
@@ -142,7 +144,7 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		default:
 			// Fallback for unknown payload types.
-			log.Printf("\tUnknown Payload Type: %T", payload)
+			log.Printf("Unknown Payload Type: %T", payload)
 			resp = &extProcPb.ProcessingResponse{
 				Response: &extProcPb.ProcessingResponse_RequestHeaders{
 					RequestHeaders: &extProcPb.HeadersResponse{},
