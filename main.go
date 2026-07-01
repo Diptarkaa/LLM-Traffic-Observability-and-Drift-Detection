@@ -28,7 +28,7 @@ func main() {
 	}
 
 	// Initialize the inspector.
-	keywordInspector := inspector.NewKeywordInspector("malicious")
+	keywordInspector := inspector.NewKeywordInspector("malicious", "bypass")
 
 	// Create the ext_proc server implementation with inspector.
 	extProcSrv := server.NewExtProcServer(keywordInspector)

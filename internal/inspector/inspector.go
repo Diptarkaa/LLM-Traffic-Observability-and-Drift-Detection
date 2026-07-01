@@ -11,10 +11,20 @@ const (
 	ResponseBody
 )
 
+// ResultType represents the action Envoy should take based on the inspection.
+type ResultType int
+
+const (
+	Safe ResultType = iota
+	Warn
+	Block
+)
+
 // Result holds the verdict of an inspection.
 type Result struct {
-	IsBlocked bool
-	Message   string
+	Type    ResultType
+	Body    string
+	Headers []string
 }
 
 // Inspector defines how payloads should be evaluated.

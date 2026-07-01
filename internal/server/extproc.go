@@ -63,16 +63,26 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			log.Printf("Request Headers Content:\n%s", headersContent)
 			result := s.inspector.Inspect(inspector.RequestHeader, headersContent)
 
-			if result.IsBlocked {
-				log.Println("Verdict: Blocked (Malicious Request Headers)")
-				resp = buildBlockResponse(result.Message)
-			} else {
+			switch result.Type {
+			case inspector.Safe:
 				log.Println("Verdict: Approved (Request Headers)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_RequestHeaders{
 						RequestHeaders: &extProcPb.HeadersResponse{},
 					},
 				}
+
+			case inspector.Warn:
+				log.Println("Verdict: Warn (Request Headers)")
+				resp = &extProcPb.ProcessingResponse{
+					Response: &extProcPb.ProcessingResponse_RequestHeaders{
+						RequestHeaders: &extProcPb.HeadersResponse{},
+					},
+				}
+
+			case inspector.Block:
+				log.Println("Verdict: Blocked (Malicious Request Headers)")
+				resp = buildBlockResponse(result.Body)
 			}
 
 		case *extProcPb.ProcessingRequest_RequestBody:
@@ -82,16 +92,26 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			result := s.inspector.Inspect(inspector.RequestBody, bodyStr)
 
-			if result.IsBlocked {
-				log.Println("Verdict: Blocked (Malicious Request Body)")
-				resp = buildBlockResponse(result.Message)
-			} else {
+			switch result.Type {
+			case inspector.Safe:
 				log.Println("Verdict: Approved (Request Body)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_RequestBody{
 						RequestBody: &extProcPb.BodyResponse{},
 					},
 				}
+
+			case inspector.Warn:
+				log.Println("Verdict: Warn (Request Body)")
+				resp = &extProcPb.ProcessingResponse{
+					Response: &extProcPb.ProcessingResponse_RequestBody{
+						RequestBody: &extProcPb.BodyResponse{},
+					},
+				}
+
+			case inspector.Block:
+				log.Println("Verdict: Blocked (Malicious Request Body)")
+				resp = buildBlockResponse(result.Body)
 			}
 
 		case *extProcPb.ProcessingRequest_ResponseHeaders:
@@ -111,16 +131,26 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			log.Printf("Response Headers Content:\n%s", headersContent)
 			result := s.inspector.Inspect(inspector.ResponseHeader, headersContent)
 
-			if result.IsBlocked {
-				log.Println("Verdict: Blocked (Malicious Response Headers)")
-				resp = buildBlockResponse(result.Message)
-			} else {
+			switch result.Type {
+			case inspector.Safe:
 				log.Println("Verdict: Approved (Response Headers)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_ResponseHeaders{
 						ResponseHeaders: &extProcPb.HeadersResponse{},
 					},
 				}
+
+			case inspector.Warn:
+				log.Println("Verdict: Warn (Response Headers)")
+				resp = &extProcPb.ProcessingResponse{
+					Response: &extProcPb.ProcessingResponse_ResponseHeaders{
+						ResponseHeaders: &extProcPb.HeadersResponse{},
+					},
+				}
+
+			case inspector.Block:
+				log.Println("Verdict: Blocked (Malicious Response Headers)")
+				resp = buildBlockResponse(result.Body)
 			}
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
@@ -130,16 +160,26 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			result := s.inspector.Inspect(inspector.ResponseBody, bodyStr)
 
-			if result.IsBlocked {
-				log.Println("Verdict: Blocked (Malicious Response Body)")
-				resp = buildBlockResponse(result.Message)
-			} else {
+			switch result.Type {
+			case inspector.Safe:
 				log.Println("Verdict: Approved (Response Body)")
 				resp = &extProcPb.ProcessingResponse{
 					Response: &extProcPb.ProcessingResponse_ResponseBody{
 						ResponseBody: &extProcPb.BodyResponse{},
 					},
 				}
+
+			case inspector.Warn:
+				log.Println("Verdict: Warn (Response Body)")
+				resp = &extProcPb.ProcessingResponse{
+					Response: &extProcPb.ProcessingResponse_ResponseBody{
+						ResponseBody: &extProcPb.BodyResponse{},
+					},
+				}
+
+			case inspector.Block:
+				log.Println("Verdict: Blocked (Malicious Response Body)")
+				resp = buildBlockResponse(result.Body)
 			}
 
 		default:
