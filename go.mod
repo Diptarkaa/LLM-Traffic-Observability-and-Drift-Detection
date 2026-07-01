@@ -1,4 +1,4 @@
-module grpc-inspection
+module github.com/AkamaiAAPH/agentic-protection
 
 go 1.26.4
 

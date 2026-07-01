@@ -7,7 +7,7 @@ import (
 	"log"
 	"strings"
 
-	"grpc-inspection/internal/inspector"
+	"github.com/AkamaiAAPH/agentic-protection/internal/inspector"
 
 	extProcPb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"

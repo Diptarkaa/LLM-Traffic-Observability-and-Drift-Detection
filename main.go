@@ -8,8 +8,8 @@ import (
 	"net"
 	"strings"
 
-	"grpc-inspection/internal/inspector"
-	"grpc-inspection/internal/server"
+	"github.com/AkamaiAAPH/agentic-protection/internal/inspector"
+	"github.com/AkamaiAAPH/agentic-protection/internal/server"
 
 	extProcPb "github.com/envoyproxy/go-control-plane/envoy/service/ext_proc/v3"
 	"google.golang.org/grpc"
