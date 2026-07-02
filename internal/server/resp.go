@@ -19,7 +19,6 @@ func buildHeaderMutations(headers map[string]string) *extProcPb.HeaderMutation {
 		setHeaders = append(setHeaders, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{
 				Key:      key,
-				Value:    val,
 				RawValue: []byte(val),
 			},
 			AppendAction: corev3.HeaderValueOption_OVERWRITE_IF_EXISTS_OR_ADD,
