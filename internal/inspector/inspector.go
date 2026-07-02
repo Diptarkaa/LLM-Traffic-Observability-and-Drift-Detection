@@ -1,6 +1,8 @@
 // Package inspector defines the interfaces and logic for inspecting traffic payloads.
 package inspector
 
+import "fmt"
+
 // PayloadType represents the part of the HTTP lifecycle being inspected.
 type PayloadType int
 
@@ -19,6 +21,19 @@ const (
 	Warn
 	Block
 )
+
+func (r Result) String() string {
+	switch r {
+	case Safe:
+		return "Safe"
+	case Warn:
+		return "Warn"
+	case Block:
+		return "Block"
+	default:
+		return fmt.Sprintf("Unknown(%d)", r)
+	}
+}
 
 // StreamContext holds the aggregated payload data for a single Envoy stream lifecycle.
 type StreamContext struct {
