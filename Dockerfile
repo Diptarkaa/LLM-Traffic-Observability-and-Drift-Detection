@@ -17,7 +17,7 @@ FROM alpine:latest
 RUN addgroup -g 10001 appgroup && \
     adduser -u 10001 -G appgroup -D -H appuser
 
-USER 10001
+USER appuser:appgroup
 
 WORKDIR /app
 
@@ -25,5 +25,4 @@ COPY --from=builder --chown=appuser:appgroup /app/grpc-inspection .
 
 EXPOSE 9000
 
-CMD ["./grpc-inspection"]
 ENTRYPOINT ["./grpc-inspection"]

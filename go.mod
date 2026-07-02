@@ -1,6 +1,8 @@
 module github.com/AkamaiAAPH/agentic-protection
 
-go 1.26.4
+go 1.26
+
+toolchain go1.26.4
 
 require (
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0
