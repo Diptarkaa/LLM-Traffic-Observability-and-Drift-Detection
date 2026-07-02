@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: prod-gateway
+  namespace: llmg
+spec:
+  gatewayClassName: envoy-ai-gateway-basic
+  listeners:
+  - name: http-listener
+    protocol: HTTPS
+    port: 443
+    hostname: "pugr.serveirc.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: tls-secret
+    allowedRoutes:
+      namespaces:
+        from: Same

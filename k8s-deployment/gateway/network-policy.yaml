@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: enforce-gateway-only
+  namespace: llmg
+spec:
+  podSelector:
+    matchExpressions:
+      - {key: app, operator: In, values: [sse-safe-app, sse-malicious-app, grpc-inspection-server, h2c-app, frontend-app]}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          gateway.envoyproxy.io/owning-gateway-name: prod-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: llmg

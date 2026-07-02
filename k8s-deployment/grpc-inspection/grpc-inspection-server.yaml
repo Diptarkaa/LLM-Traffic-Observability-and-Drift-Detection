@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-inspection-server-deployment
+  labels:
+    app: grpc-inspection-server
+  namespace: llmg
+spec:
+  selector:
+    matchLabels:
+      app: grpc-inspection-server
+  template:
+    metadata:
+      labels:
+        app: grpc-inspection-server
+    spec:
+      containers:
+      - name: grpc-inspection-container
+        image: owaap.azurecr.io/pugr/grpc-inspection
+        args:
+          - "--debug"
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 9000
+            name: grpc
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-inspection-service
+  labels:
+    app: grpc-inspection-service
+  namespace: llmg
+spec:
+  type: ClusterIP
+  selector:
+    app: grpc-inspection-server
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+      appProtocol: h2c

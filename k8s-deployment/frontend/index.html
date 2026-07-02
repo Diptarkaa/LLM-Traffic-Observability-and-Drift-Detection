@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stream API Tester</title>
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --bg-panel: #111111;
+            --bg-input: #222222;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent: #00ff88;
+            --accent-hover: #00cc6a;
+            --danger: #ff4444;
+            --danger-hover: #cc0000;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Consolas', 'Courier New', monospace;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .request-panel {
+            width: 40%;
+            min-width: 350px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-panel);
+        }
+
+        .response-panel {
+            width: 60%;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+        }
+
+        .section {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Inputs & Buttons */
+        input, select, textarea {
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: inherit;
+            border-radius: 4px;
+            width: 100%;
+            outline: none;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button.danger {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        button.danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        button.outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        button.outline:hover {
+            background-color: var(--bg-input);
+            border-color: var(--text-muted);
+        }
+
+        /* Scrollable Areas */
+        .scrollable {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        /* Headers Builder */
+        .header-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .header-row input[type="text"] {
+            flex: 1;
+        }
+
+        .header-row input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        /* Response Headers */
+        .response-meta {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-panel);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background-color: var(--border);
+        }
+        .status-badge.success { background-color: #004d28; color: var(--accent); }
+        .status-badge.error { background-color: #4d0000; color: var(--danger); }
+
+        .headers-display {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Chat/Chunks Stream View */
+        .chunks-container {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .chunk {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            max-width: 90%;
+            align-self: flex-start;
+            animation: fadeIn 0.3s ease-out;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .chunk-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+        .hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Request Panel -->
+    <div class="request-panel">
+        <div class="section">
+            <div class="section-title">Endpoint Configuration</div>
+            <div class="input-group">
+                <select id="req-method" style="width: 100px;">
+                    <option value="GET">GET</option>
+                    <option value="POST">POST</option>
+                    <option value="PUT">PUT</option>
+                    <option value="DELETE">DELETE</option>
+                </select>
+                <input type="text" id="req-url" value="https://pugr.serveirc.com/sse" placeholder="https://...">
+            </div>
+            <div class="input-group">
+                <label style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                    <input type="checkbox" id="req-credentials" style="width: auto;"> 
+                    Send Credentials (Cookies)
+                </label>
+            </div>
+            <div class="hint">Note: Browser fetch API blocks custom 'Cookie' headers. Use the checkbox above to include existing domain cookies.</div>
+        </div>
+
+        <div class="section scrollable" style="flex-grow: 0; max-height: 250px;">
+            <div class="section-title">
+                Headers
+                <button class="outline" onclick="addHeaderRow()" style="padding: 0.1rem 0.4rem; font-size: 0.7rem; float: right;">+ Add Header</button>
+            </div>
+            <div id="headers-container">
+                <!-- Initial header row -->
+                <div class="header-row">
+                    <input type="checkbox" class="header-enable" checked title="Enable/Disable Header">
+                    <input type="text" placeholder="Key (e.g. Accept)" value="Accept">
+                    <input type="text" placeholder="Value (e.g. text/event-stream)" value="text/event-stream">
+                    <button class="danger" onclick="this.parentElement.remove()">X</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="section scrollable">
+            <div class="section-title">Request Body</div>
+            <textarea id="req-body" rows="6" placeholder="Enter request body here... (Leave empty for GET requests)"></textarea>
+        </div>
+
+        <div class="section" style="margin-top: auto;">
+            <div style="display: flex; gap: 1rem;">
+                <button id="btn-send" style="flex: 1;" onclick="sendRequest()">Send Request</button>
+                <button id="btn-abort" class="danger" style="display: none; flex: 1;" onclick="abortRequest()">Abort Connection</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Panel -->
+    <div class="response-panel">
+        <div class="response-meta" id="response-meta" style="display: none;">
+            <div class="section-title">Response Status & Headers</div>
+            <div id="res-status" class="status-badge"></div>
+            <div id="res-headers" class="headers-display"></div>
+        </div>
+        
+        <div class="scrollable chunks-container" id="chunks-container">
+            <!-- Messages/Chunks will appear here -->
+            <div style="color: var(--text-muted); text-align: center; margin-top: 2rem;" id="placeholder-text">
+                Response chunks will stream here...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let abortController = null;
+    let chunkCount = 0;
+
+    function addHeaderRow(key = '', value = '') {
+        const container = document.getElementById('headers-container');
+        const row = document.createElement('div');
+        row.className = 'header-row';
+        row.innerHTML = `
+            <input type="checkbox" class="header-enable" checked title="Enable/Disable Header">
+            <input type="text" placeholder="Key" value="${key}">
+            <input type="text" placeholder="Value" value="${value}">
+            <button class="danger" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function getHeaders() {
+        const headers = {};
+        const rows = document.querySelectorAll('.header-row');
+        rows.forEach(row => {
+            const isEnabled = row.querySelector('.header-enable').checked;
+            if (!isEnabled) return;
+
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const key = inputs[0].value.trim();
+            const val = inputs[1].value.trim();
+            if (key) {
+                headers[key] = val;
+            }
+        });
+        return headers;
+    }
+
+    function appendChunk(text, isSystem = false) {
+        const container = document.getElementById('chunks-container');
+        document.getElementById('placeholder-text').style.display = 'none';
+
+        chunkCount++;
+        const time = new Date().toLocaleTimeString();
+
+        const chunkEl = document.createElement('div');
+        chunkEl.className = 'chunk';
+        
+        if (isSystem) {
+            chunkEl.style.borderColor = 'var(--text-muted)';
+            chunkEl.style.color = 'var(--text-muted)';
+            chunkEl.style.alignSelf = 'center';
+            chunkEl.style.fontStyle = 'italic';
+            chunkEl.innerHTML = text;
+        } else {
+            chunkEl.innerHTML = `
+                <div class="chunk-meta">
+                    <span>Chunk #${chunkCount}</span>
+                    <span>${time}</span>
+                </div>
+                <div>${escapeHTML(text)}</div>
+            `;
+        }
+
+        container.appendChild(chunkEl);
+
+        // Auto-scroll to bottom
+        container.parentElement.scrollTop = container.parentElement.scrollHeight;
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+
+    function clearResponse() {
+        document.getElementById('chunks-container').innerHTML = `
+            <div style="color: var(--text-muted); text-align: center; margin-top: 2rem;" id="placeholder-text">
+                Response chunks will stream here...
+            </div>
+        `;
+        document.getElementById('response-meta').style.display = 'none';
+        document.getElementById('res-headers').textContent = '';
+        chunkCount = 0;
+    }
+
+    function toggleButtons(isStreaming) {
+        document.getElementById('btn-send').style.display = isStreaming ? 'none' : 'block';
+        document.getElementById('btn-abort').style.display = isStreaming ? 'block' : 'none';
+    }
+
+    function abortRequest() {
+        if (abortController) {
+            abortController.abort();
+            appendChunk("Connection aborted by user.", true);
+            toggleButtons(false);
+        }
+    }
+
+    async function sendRequest() {
+        clearResponse();
+        const url = document.getElementById('req-url').value;
+        const method = document.getElementById('req-method').value;
+        const body = document.getElementById('req-body').value;
+        const sendCredentials = document.getElementById('req-credentials').checked;
+        const headers = getHeaders();
+
+        const options = {
+            method,
+            headers,
+            credentials: sendCredentials ? 'include' : 'omit'
+        };
+
+        if (method !== 'GET' && method !== 'HEAD' && body.trim() !== '') {
+            options.body = body;
+        }
+
+        abortController = new AbortController();
+        options.signal = abortController.signal;
+
+        toggleButtons(true);
+        appendChunk(`Initiating connection to ${url}...`, true);
+
+        try {
+            const response = await fetch(url, options);
+            
+            // Display Response Meta (Status & Headers)
+            const metaContainer = document.getElementById('response-meta');
+            const statusEl = document.getElementById('res-status');
+            const headersEl = document.getElementById('res-headers');
+            
+            metaContainer.style.display = 'block';
+            statusEl.textContent = `${response.status} ${response.statusText}`;
+            statusEl.className = 'status-badge ' + (response.ok ? 'success' : 'error');
+
+            let headersText = '';
+            response.headers.forEach((val, key) => {
+                headersText += `${key}: ${val}\n`;
+            });
+            headersEl.textContent = headersText || 'No headers received.';
+
+            // Handle the stream
+            if (!response.body) {
+                appendChunk("No response body available to read.", true);
+                toggleButtons(false);
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+
+            appendChunk("Stream connected. Waiting for chunks...", true);
+
+            while (true) {
+                const { done, value } = await reader.read();
+                
+                if (done) {
+                    appendChunk("Stream closed by server.", true);
+                    break;
+                }
+                
+                // Decode the chunk as a string
+                const chunkText = decoder.decode(value, { stream: true });
+                if (chunkText) {
+                    appendChunk(chunkText);
+                }
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // Handled in abortRequest()
+            } else {
+                appendChunk(`Network Error: ${error.message}`, true);
+            }
+        } finally {
+            toggleButtons(false);
+            abortController = null;
+        }
+    }
+</script>
+</body>
+</html>

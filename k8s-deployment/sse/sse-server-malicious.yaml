@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sse-malicious-app
+  namespace: llmg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sse-malicious-app
+  template:
+    metadata:
+      labels:
+        app: sse-malicious-app
+    spec:
+      containers:
+      - name: sse-malicious-app
+        image: owaap.azurecr.io/pugr/sse-echo-server:latest
+        args:
+          - "--port=8080"
+          - "--interval=1s"
+          - "--malicious"
+
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sse-malicious-app-svc
+  namespace: llmg
+spec:
+  selector:
+    app: sse-malicious-app
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: h2cll-malicious-app
+  namespace: llmg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: h2cll-malicious-app
+  template:
+    metadata:
+      labels:
+        app: h2cll-malicious-app
+    spec:
+      containers:
+      - name: h2cll-app
+        image: owaap.azurecr.io/pugr/h2cll:latest
+        args:
+          - "--port=8080"
+          - "--interval=1s"
+          - "--malicious"
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: h2cll-malicious-app-svc
+  namespace: llmg
+spec:
+  selector:
+    app: h2cll-malicious-app
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c
