@@ -14,7 +14,7 @@ func buildHeaderMutations(headers map[string]string) *extProcPb.HeaderMutation {
 		return nil
 	}
 
-	var setHeaders []*corev3.HeaderValueOption
+	setHeaders := make([]*corev3.HeaderValueOption, 0, len(headers))
 	for key, val := range headers {
 		setHeaders = append(setHeaders, &corev3.HeaderValueOption{
 			Header: &corev3.HeaderValue{

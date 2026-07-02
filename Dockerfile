@@ -26,3 +26,4 @@ COPY --from=builder --chown=appuser:appgroup /app/grpc-inspection .
 EXPOSE 9000
 
 CMD ["./grpc-inspection"]
+ENTRYPOINT ["./grpc-inspection"]

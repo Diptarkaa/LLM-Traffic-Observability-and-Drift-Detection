@@ -4,7 +4,7 @@ package server
 import (
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"strings"
 
 	"github.com/AkamaiAAPH/agentic-protection/internal/inspector"
@@ -26,7 +26,7 @@ func NewExtProcServer(insp inspector.Inspector) *ExtProcServer {
 // Process handles the gRPC stream.
 // Envoy sends request/response body/header, and the server replies with actions (allow, block, modify).
 func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer) error {
-	log.Println("New gRPC stream opened by Envoy")
+	slog.Debug("New gRPC stream opened by Envoy")
 
 	streamContext := &inspector.StreamContext{
 		RequestHeaders:  make(map[string]string),
@@ -37,11 +37,11 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
-			log.Println("gRPC stream closed by Envoy")
+			slog.Debug("gRPC stream closed by Envoy")
 			return nil
 		}
 		if err != nil {
-			log.Printf("gRPC stream error: %v", err)
+			slog.Error("gRPC stream error", "err", err)
 			return err
 		}
 
@@ -51,7 +51,7 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		switch payload := req.Request.(type) {
 		case *extProcPb.ProcessingRequest_RequestHeaders:
-			log.Println("Processing Request Headers")
+			slog.Debug("Processing Request Headers")
 			var headerStr strings.Builder
 
 			// Reconstruct headers into a single string for inspection.
@@ -65,16 +65,16 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			payloadStr = strings.TrimSpace(headerStr.String())
 			payloadType = inspector.RequestHeader
-			log.Printf("Request Headers Content:\n%s", payloadStr)
+			slog.Debug("Request Headers Content", "headers", payloadStr)
 
 		case *extProcPb.ProcessingRequest_RequestBody:
-			log.Println("Processing Request Body")
+			slog.Debug("Processing Request Body")
 			payloadStr = string(payload.RequestBody.Body)
 			payloadType = inspector.RequestBody
-			log.Printf("Request Body Content: %s", payloadStr)
+			slog.Debug("Request Body Content", "body", payloadStr)
 
 		case *extProcPb.ProcessingRequest_ResponseHeaders:
-			log.Println("Processing Response Headers")
+			slog.Debug("Processing Response Headers")
 			var headerStr strings.Builder
 
 			// Reconstruct headers into a single string for inspection.
@@ -88,17 +88,17 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			payloadStr = strings.TrimSpace(headerStr.String())
 			payloadType = inspector.ResponseHeader
-			log.Printf("Response Headers Content:\n%s", payloadStr)
+			slog.Debug("Response Headers Content", "headers", payloadStr)
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
-			log.Println("Processing Response Body")
+			slog.Debug("Processing Response Body")
 			payloadStr = string(payload.ResponseBody.Body)
 			payloadType = inspector.ResponseBody
-			log.Printf("Response Body Content: %s", payloadStr)
+			slog.Debug("Response Body Content", "body", payloadStr)
 
 		default:
 			// Fallback for unknown payload types.
-			log.Printf("Unknown Payload Type: %T", payload)
+			slog.Warn("Unknown Payload Type", "type", fmt.Sprintf("%T", payload))
 			resp = &extProcPb.ProcessingResponse{
 				Response: &extProcPb.ProcessingResponse_RequestHeaders{
 					RequestHeaders: &extProcPb.HeadersResponse{},
@@ -108,13 +108,13 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		if resp == nil {
 			result := s.inspector.Inspect(payloadType, payloadStr, streamContext)
-			log.Printf("verdict: %v", result)
+			slog.Info("verdict", "result", result)
 			resp = buildResponse(payloadType, result, streamContext)
 		}
 
 		// Send verdict back to Envoy.
 		if err := stream.Send(resp); err != nil {
-			log.Printf("Failed to send response back to Envoy: %v", err)
+			slog.Error("Failed to send response back to Envoy", "err", err)
 			return err
 		}
 	}

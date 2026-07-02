@@ -4,8 +4,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/AkamaiAAPH/agentic-protection/internal/inspector"
@@ -16,15 +17,23 @@ import (
 )
 
 func main() {
-	// Parse command line arguments for the port.
+	// Parse command line arguments for the port and log level.
 	portFlag := flag.String("port", "9000", "Port to run the gRPC server on")
+	debugFlag := flag.Bool("debug", false, "Enable debug log level")
 	flag.Parse()
+
+	logLevel := slog.LevelInfo
+	if *debugFlag {
+		logLevel = slog.LevelDebug
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})))
 
 	addr := fmt.Sprintf(":%s", strings.TrimPrefix(*portFlag, ":"))
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("Failed to listen on %s: %v", addr, err)
+		slog.Error("Failed to listen", "addr", addr, "err", err)
+		os.Exit(1)
 	}
 
 	// Initialize the inspector.
@@ -37,8 +46,9 @@ func main() {
 	grpcServer := grpc.NewServer()
 	extProcPb.RegisterExternalProcessorServer(grpcServer, extProcSrv)
 
-	log.Printf("Starting ext_proc gRPC Server on port %s", addr)
+	slog.Info("Starting ext_proc gRPC Server", "addr", addr)
 	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
+		slog.Error("Failed to serve", "err", err)
+		os.Exit(1)
 	}
 }
