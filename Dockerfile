@@ -12,7 +12,7 @@ ARG TARGETARCH
 
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o grpc-inspection main.go
 
-FROM alpine:latest
+FROM alpine:3.23.5
 
 RUN addgroup -g 10001 appgroup && \
     adduser -u 10001 -G appgroup -D -H appuser

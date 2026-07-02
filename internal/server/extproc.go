@@ -103,18 +103,12 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 		default:
 			// Fallback for unknown payload types.
 			slog.Warn("Unknown Payload Type", "type", fmt.Sprintf("%T", payload))
-			resp = &extProcPb.ProcessingResponse{
-				Response: &extProcPb.ProcessingResponse_RequestHeaders{
-					RequestHeaders: &extProcPb.HeadersResponse{},
-				},
-			}
+			return fmt.Errorf("unsupported ProcessingRequest type: %T", payload)
 		}
 
-		if resp == nil {
-			result := s.inspector.Inspect(payloadType, payloadStr, streamContext)
-			slog.Info("verdict", "result", result)
-			resp = buildResponse(payloadType, result, streamContext)
-		}
+		result := s.inspector.Inspect(payloadType, payloadStr, streamContext)
+		slog.Info("verdict", "result", result)
+		resp = buildResponse(payloadType, result, streamContext)
 
 		// Send verdict back to Envoy.
 		if err := stream.Send(resp); err != nil {
