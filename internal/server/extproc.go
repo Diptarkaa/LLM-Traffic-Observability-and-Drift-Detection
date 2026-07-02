@@ -61,6 +61,10 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 					val = header.Value
 				}
 				fmt.Fprintf(&headerStr, "%s: %s\n", header.Key, val)
+
+				if header.Key == "pragma" && val == "akamai-x-get-service" {
+					streamContext.ResponseHeaders["akamai-x-service"] = "agentic protection grpc inspection server"
+				}
 			}
 
 			payloadStr = strings.TrimSpace(headerStr.String())
