@@ -11,24 +11,25 @@ const (
 	ResponseBody
 )
 
-// ResultType represents the action Envoy should take based on the inspection.
-type ResultType int
+// Result represents the action Envoy should take based on the inspection.
+type Result int
 
 const (
-	Safe ResultType = iota
+	Safe Result = iota
 	Warn
 	Block
 )
 
-// Result holds the verdict of an inspection.
-type Result struct {
-	Type    ResultType
-	Body    string
-	Headers []string
+// StreamContext holds the aggregated payload data for a single Envoy stream lifecycle.
+type StreamContext struct {
+	RequestHeaders  map[string]string
+	RequestBody     string
+	ResponseHeaders map[string]string
+	ResponseBody    string
 }
 
 // Inspector defines how payloads should be evaluated.
 type Inspector interface {
 	// Inspect takes the payload type and its content, and returns a Result.
-	Inspect(pType PayloadType, content string) Result
+	Inspect(pType PayloadType, content string, streamContext *StreamContext) Result
 }
