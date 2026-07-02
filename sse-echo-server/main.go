@@ -1,0 +1,97 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"math/rand"
+	"net/http"
+	"time"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+)
+
+func generateJunkData(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func main() {
+	port := flag.String("port", "8000", "Port to run the SSE server on")
+	interval := flag.Duration("interval", 1*time.Second, "Time interval between pushed chunks")
+	malicious := flag.Bool("malicious", false, "Inject the 'malicious-server' string once per stream")
+	flag.Parse()
+
+	rand.Seed(time.Now().UnixNano())
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		clientAddr := r.RemoteAddr
+		log.Printf("[START] SSE Connection established from %s using %s", clientAddr, r.Proto)
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.WriteHeader(http.StatusOK)
+		flusher.Flush()
+		
+		log.Printf("[FLUSH] Initial SSE headers sent to %s", clientAddr)
+
+		ticker := time.NewTicker(*interval)
+		defer ticker.Stop()
+
+		i := 1
+		maliciousInjected := false 
+
+		for {
+			select {
+			case <-r.Context().Done():
+				log.Printf("[END] SSE Connection ended by client %s", clientAddr)
+				return
+			case <-ticker.C:
+				var payload string
+
+				if *malicious && !maliciousInjected && (rand.Float32() < 0.25 || i == 5) {
+					payload = "malicious-server"
+					maliciousInjected = true
+					log.Printf("[WARNING] Injected malicious payload to %s", clientAddr)
+				} else {
+					junkLength := rand.Intn(51) + 10
+					payload = generateJunkData(junkLength)
+				}
+
+				msg := fmt.Sprintf("Message %d | Time: %s | SSE Payload: %s", 
+					i, time.Now().Format("15:04:05"), payload)
+				
+				fmt.Fprintf(w, "data: %s\n\n", msg)
+				flusher.Flush()
+				
+				log.Printf("[FLUSH] SSE Data pushed -> %s", msg)
+				i++
+			}
+		}
+	})
+
+	h2s := &http2.Server{}
+	server := &http.Server{
+		Addr:    ":" + *port,
+		Handler: h2c.NewHandler(mux, h2s),
+	}
+
+	log.Printf("Starting SSE server on port %s | Interval: %v | Malicious Mode: %v", *port, *interval, *malicious)
+	if err := server.ListenAndServe(); err != nil {
+		log.Fatalf("Server failed: %v", err)
+	}
+}
