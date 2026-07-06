@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpc-inspection-server-deployment
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: grpc-inspection-server
+spec:
+  selector:
+    matchLabels:
+      app: grpc-inspection-server
+  template:
+    metadata:
+      labels:
+        app: grpc-inspection-server
+    spec:
+      containers:
+      - name: grpc-inspection-container
+        image: {{ .Values.images.grpcInspection }}
+        args:
+          {{- if .Values.grpcInspection.debug }}
+          - "--debug"
+          {{- end }}
+        imagePullPolicy: Always
+        ports:
+          - containerPort: 9000
+            name: grpc
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 10001
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          {{- toYaml .Values.grpcInspection.resources | nindent 10 }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-inspection-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: grpc-inspection-service
+spec:
+  type: ClusterIP
+  selector:
+    app: grpc-inspection-server
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+      appProtocol: h2c

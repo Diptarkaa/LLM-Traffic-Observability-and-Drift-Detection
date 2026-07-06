@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-app
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: frontend-app
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: frontend-app
+  template:
+    metadata:
+      labels:
+        app: frontend-app
+    spec:
+      containers:
+      - name: nginx
+        image: {{ .Values.images.frontend }}
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: html-volume
+        configMap:
+          name: frontend-html
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: frontend-app
+  ports:
+  - port: 80
+    targetPort: 80

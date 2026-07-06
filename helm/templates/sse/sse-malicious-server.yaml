@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sse-malicious-app
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.sse.malicious.replicas }}
+  selector:
+    matchLabels:
+      app: sse-malicious-app
+  template:
+    metadata:
+      labels:
+        app: sse-malicious-app
+    spec:
+      containers:
+      - name: sse-malicious-app
+        image: {{ .Values.images.ssEchoServer }}
+        args:
+          - "--port=8080"
+          - "--interval={{ .Values.sse.malicious.interval }}"
+          - "--malicious"
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sse-malicious-app-svc
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: sse-malicious-app
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

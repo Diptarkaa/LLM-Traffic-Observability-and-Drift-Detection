@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: h2c-app
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.h2c.replicas }}
+  selector:
+    matchLabels:
+      app: h2c-app
+  template:
+    metadata:
+      labels:
+        app: h2c-app
+    spec:
+      containers:
+      - name: echo-container
+        image: {{ .Values.images.h2c }}
+        env:
+        - name: ECHO_APP_H2C
+          value: "true"
+        ports:
+        - name: h2c-port
+          containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: h2c-app-svc
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: h2c-app
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: prod-gateway
+  namespace: {{ .Values.namespace }}
+spec:
+  gatewayClassName: envoy-ai-gateway-basic
+  listeners:
+  - name: http-listener
+    protocol: HTTPS
+    port: 443
+    hostname: {{ .Values.gateway.hostname | quote }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: {{ .Values.gateway.tls.secretName }}
+    allowedRoutes:
+      namespaces:
+        from: Same

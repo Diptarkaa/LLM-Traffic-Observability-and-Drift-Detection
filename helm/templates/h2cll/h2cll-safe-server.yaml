@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: h2cll-safe-app
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.h2cll.safe.replicas }}
+  selector:
+    matchLabels:
+      app: h2cll-safe-app
+  template:
+    metadata:
+      labels:
+        app: h2cll-safe-app
+    spec:
+      containers:
+      - name: h2cll-app
+        image: {{ .Values.images.h2cll }}
+        args:
+          - "--port=8080"
+          - "--interval={{ .Values.h2cll.safe.interval }}"
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: h2cll-safe-app-svc
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: h2cll-safe-app
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

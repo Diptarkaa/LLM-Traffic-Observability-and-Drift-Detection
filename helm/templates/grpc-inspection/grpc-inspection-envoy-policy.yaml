@@ -1,0 +1,21 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: grpc-inspection-policy
+  namespace: {{ .Values.namespace }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: prod-routes
+  extProc:
+    - backendRefs:
+        - name: grpc-inspection-service
+          port: 9000
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
+      messageTimeout: 500ms
+      failOpen: false
