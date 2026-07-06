@@ -1,11 +1,11 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: prod-routes
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-routes
+  namespace: {{ .Release.Namespace }}
 spec:
   parentRefs:
-  - name: prod-gateway
+  - name: {{ include "agentic-protection.fullname" . }}-gateway
   rules:
   - matches:
     - path:
@@ -14,10 +14,10 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: sse-malicious-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-sse-malicious-svc
       port: 8080
       weight: 50
-    - name: sse-safe-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
       port: 8080
       weight: 50
   - matches:
@@ -27,7 +27,7 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: sse-malicious-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-sse-malicious-svc
       port: 8080
   - matches:
     - path:
@@ -36,14 +36,14 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: sse-safe-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
       port: 8080
   - matches:
     - path:
         type: PathPrefix
         value: /h2c
     backendRefs:
-    - name: h2c-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-h2c-svc
       port: 8080
   - matches:
     - path:
@@ -52,10 +52,10 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: h2cll-malicious-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-malicious-svc
       port: 8080
       weight: 50
-    - name: h2cll-safe-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-safe-svc
       port: 8080
       weight: 50
   - matches:
@@ -65,7 +65,7 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: h2cll-malicious-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-malicious-svc
       port: 8080
   - matches:
     - path:
@@ -74,12 +74,12 @@ spec:
     timeouts:
       request: 0s
     backendRefs:
-    - name: h2cll-safe-app-svc
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-safe-svc
       port: 8080
   - matches:
     - path:
         type: PathPrefix
         value: /
     backendRefs:
-    - name: frontend-svc
+    - name: {{ include "agentic-protection.fullname" . }}-frontend-svc
       port: 80

@@ -1,12 +1,12 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: prod-gateway
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
 spec:
-  gatewayClassName: envoy-ai-gateway-basic
+  gatewayClassName: {{ include "agentic-protection.fullname" . }}-class
   listeners:
-  - name: https-listener
+  - name: http-listener
     protocol: HTTPS
     port: 443
     hostname: {{ .Values.gateway.hostname | quote }}

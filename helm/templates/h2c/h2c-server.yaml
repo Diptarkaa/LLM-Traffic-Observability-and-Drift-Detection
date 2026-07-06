@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: h2c-app
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-h2c
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.h2c.replicas }}
   selector:
     matchLabels:
-      app: h2c-app
+      app: {{ include "agentic-protection.fullname" . }}-h2c
   template:
     metadata:
       labels:
-        app: h2c-app
+        app: {{ include "agentic-protection.fullname" . }}-h2c
     spec:
       containers:
       - name: echo-container
@@ -28,11 +28,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: h2c-app-svc
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-h2c-svc
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: h2c-app
+    app: {{ include "agentic-protection.fullname" . }}-h2c
   ports:
   - name: h2c-port
     port: 8080

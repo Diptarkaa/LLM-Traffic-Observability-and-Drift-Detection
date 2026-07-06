@@ -1,4 +1,7 @@
-namespace: llmg
+createNamespace: false
+
+nameOverride: ""
+fullnameOverride: ""
 
 gateway:
   hostname: "pugr.serveirc.com"

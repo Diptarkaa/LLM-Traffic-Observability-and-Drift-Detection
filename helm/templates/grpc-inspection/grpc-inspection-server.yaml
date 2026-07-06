@@ -1,19 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: grpc-inspection-server-deployment
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-grpc-inspection
+  namespace: {{ .Release.Namespace }}
   labels:
-    app: grpc-inspection-server
+    app: {{ include "agentic-protection.fullname" . }}-grpc-inspection
 spec:
-  replicas: {{ .Values.grpcInspection.replicas }}
   selector:
     matchLabels:
-      app: grpc-inspection-server
+      app: {{ include "agentic-protection.fullname" . }}-grpc-inspection
   template:
     metadata:
       labels:
-        app: grpc-inspection-server
+        app: {{ include "agentic-protection.fullname" . }}-grpc-inspection
     spec:
       containers:
       - name: grpc-inspection-container
@@ -42,14 +41,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: grpc-inspection-service
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-svc
+  namespace: {{ .Release.Namespace }}
   labels:
-    app: grpc-inspection-service
+    app: {{ include "agentic-protection.fullname" . }}-grpc-inspection
 spec:
   type: ClusterIP
   selector:
-    app: grpc-inspection-server
+    app: {{ include "agentic-protection.fullname" . }}-grpc-inspection
   ports:
     - protocol: TCP
       port: 9000

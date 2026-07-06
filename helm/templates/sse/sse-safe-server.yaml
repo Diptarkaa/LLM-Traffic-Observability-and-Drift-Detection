@@ -1,17 +1,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: sse-safe-app
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-sse-safe
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: {{ .Values.sse.safe.replicas }}
   selector:
     matchLabels:
-      app: sse-safe-app
+      app: {{ include "agentic-protection.fullname" . }}-sse-safe
   template:
     metadata:
       labels:
-        app: sse-safe-app
+        app: {{ include "agentic-protection.fullname" . }}-sse-safe
     spec:
       containers:
       - name: sse-app
@@ -28,11 +28,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: sse-safe-app-svc
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: sse-safe-app
+    app: {{ include "agentic-protection.fullname" . }}-sse-safe
   ports:
   - name: h2c-port
     port: 8080

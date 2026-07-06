@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend-app
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
   labels:
-    app: frontend-app
+    app: {{ include "agentic-protection.fullname" . }}-frontend
 spec:
   replicas: {{ .Values.frontend.replicas }}
   selector:
     matchLabels:
-      app: frontend-app
+      app: {{ include "agentic-protection.fullname" . }}-frontend
   template:
     metadata:
       labels:
-        app: frontend-app
+        app: {{ include "agentic-protection.fullname" . }}-frontend
     spec:
       containers:
       - name: nginx
@@ -27,18 +27,18 @@ spec:
       volumes:
       - name: html-volume
         configMap:
-          name: frontend-html
+          name: {{ include "agentic-protection.fullname" . }}-frontend-html
 
 ---
 
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend-svc
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-frontend-svc
+  namespace: {{ .Release.Namespace }}
 spec:
   selector:
-    app: frontend-app
+    app: {{ include "agentic-protection.fullname" . }}-frontend
   ports:
   - port: 80
     targetPort: 80

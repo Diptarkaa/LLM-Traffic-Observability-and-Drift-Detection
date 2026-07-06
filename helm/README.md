@@ -49,7 +49,9 @@ All configurable values are in [`values.yaml`](./values.yaml). Key parameters:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `namespace` | `llmg` | Kubernetes namespace for all resources |
+| `createNamespace` | `false` | Create the Namespace resource from the chart; set to `true` if not using `--create-namespace` |
+| `nameOverride` | `""` | Override the chart name component of resource names |
+| `fullnameOverride` | `""` | Override the full resource name prefix entirely |
 | `gateway.hostname` | `pugr.serveirc.com` | Public hostname exposed by the Gateway |
 | `gateway.tls.secretName` | `tls-secret` | Name of the TLS Secret referenced by the Gateway |
 | `images.*` | see values.yaml | Container images for each component |
@@ -67,37 +69,45 @@ gateway:
   hostname: "your.domain.com"
 ```
 
-To use a different namespace, update:
-
-```yaml
-namespace: your-namespace
-```
-
 ### Step 2: Install the chart
+
+The chart uses `.Release.Namespace` for all resource namespaces, pass the target namespace via the standard Helm flag. Use `--create-namespace` to have Helm create it automatically, or set `createNamespace: true` in `values.yaml` to let the chart manage the Namespace resource itself.
 
 ```bash
 helm install agentic-protection ./helm \
-  --set gateway.hostname=your.domain.com \
-  --set namespace=your-namespace
+  --namespace llmg \
+  --create-namespace \
+  --set gateway.hostname=your.domain.com
 ```
 
 Or supply a custom values file:
 
 ```bash
-helm install agentic-protection ./helm -f my-values.yaml
+helm install agentic-protection ./helm \
+  --namespace llmg \
+  --create-namespace \
+  -f my-values.yaml
+```
+
+To run a second environment alongside an existing installation, use a different release name:
+
+```bash
+helm install staging ./helm \
+  --namespace llmg \
+  --set gateway.hostname=staging.domain.com
 ```
 
 ### Upgrade
 
 ```bash
-helm upgrade agentic-protection ./helm -f my-values.yaml
+helm upgrade agentic-protection ./helm --namespace llmg -f my-values.yaml
 ```
 
 ### Uninstall
 
 ```bash
-helm uninstall agentic-protection
-kubectl delete namespace <namespace>
+helm uninstall agentic-protection --namespace llmg
+kubectl delete namespace llmg
 ```
 
 ### Step 3: Provision TLS
@@ -130,6 +140,7 @@ helm/
 ├── Chart.yaml
 ├── values.yaml
 └── templates/
+    ├── _helpers.tpl
     ├── namespace.yaml
     ├── gateway/
     │   ├── gateway-class.yaml

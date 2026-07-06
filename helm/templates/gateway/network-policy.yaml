@@ -1,19 +1,19 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: enforce-gateway-only
-  namespace: {{ .Values.namespace }}
+  name: {{ include "agentic-protection.fullname" . }}-enforce-gateway-only
+  namespace: {{ .Release.Namespace }}
 spec:
   podSelector:
     matchExpressions:
       - key: app
         operator: In
         values:
-          - sse-safe-app
-          - sse-malicious-app
-          - grpc-inspection-server
-          - h2c-app
-          - frontend-app
+          - {{ include "agentic-protection.fullname" . }}-sse-safe
+          - {{ include "agentic-protection.fullname" . }}-sse-malicious
+          - {{ include "agentic-protection.fullname" . }}-grpc-inspection
+          - {{ include "agentic-protection.fullname" . }}-h2c
+          - {{ include "agentic-protection.fullname" . }}-frontend
   policyTypes:
   - Ingress
   ingress:
@@ -23,5 +23,5 @@ spec:
           kubernetes.io/metadata.name: envoy-gateway-system
       podSelector:
         matchLabels:
-          gateway.envoyproxy.io/owning-gateway-name: prod-gateway
-          gateway.envoyproxy.io/owning-gateway-namespace: {{ .Values.namespace }}
+          gateway.envoyproxy.io/owning-gateway-name: {{ include "agentic-protection.fullname" . }}-gateway
+          gateway.envoyproxy.io/owning-gateway-namespace: {{ .Release.Namespace }}
