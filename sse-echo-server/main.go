@@ -43,17 +43,16 @@ func main() {
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
-		
+
 		log.Printf("[FLUSH] Initial SSE headers sent to %s", clientAddr)
 
 		ticker := time.NewTicker(*interval)
 		defer ticker.Stop()
 
 		i := 1
-		maliciousInjected := false 
+		maliciousInjected := false
 
 		for {
 			select {
@@ -72,12 +71,15 @@ func main() {
 					payload = generateJunkData(junkLength)
 				}
 
-				msg := fmt.Sprintf("Message %d | Time: %s | SSE Payload: %s", 
+				msg := fmt.Sprintf("Message %d | Time: %s | SSE Payload: %s",
 					i, time.Now().Format("15:04:05"), payload)
-				
-				fmt.Fprintf(w, "data: %s\n\n", msg)
+
+				if _, err := fmt.Fprintf(w, "data: %s\n\n", msg); err != nil {
+					log.Printf("[END] SSE write failed to %s: %v", clientAddr, err)
+					return
+				}
 				flusher.Flush()
-				
+
 				log.Printf("[FLUSH] SSE Data pushed -> %s", msg)
 				i++
 			}

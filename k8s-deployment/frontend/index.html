@@ -301,10 +301,13 @@
         row.className = 'header-row';
         row.innerHTML = `
             <input type="checkbox" class="header-enable" checked title="Enable/Disable Header">
-            <input type="text" placeholder="Key" value="${key}">
-            <input type="text" placeholder="Value" value="${value}">
+            <input type="text" placeholder="Key">
+            <input type="text" placeholder="Value">
             <button class="danger" onclick="this.parentElement.remove()">X</button>
         `;
+        const inputs = row.querySelectorAll('input[type="text"]');
+        inputs[0].value = key;
+        inputs[1].value = value;
         container.appendChild(row);
     }
 
@@ -340,7 +343,7 @@
             chunkEl.style.color = 'var(--text-muted)';
             chunkEl.style.alignSelf = 'center';
             chunkEl.style.fontStyle = 'italic';
-            chunkEl.innerHTML = text;
+            chunkEl.textContent = text;
         } else {
             chunkEl.innerHTML = `
                 <div class="chunk-meta">
@@ -353,8 +356,7 @@
 
         container.appendChild(chunkEl);
 
-        // Auto-scroll to bottom
-        container.parentElement.scrollTop = container.parentElement.scrollHeight;
+        container.scrollTop = container.scrollHeight;
     }
 
     function escapeHTML(str) {

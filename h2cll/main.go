@@ -45,7 +45,7 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		flusher.Flush()
-		
+
 		log.Printf("[FLUSH] Initial HTTP headers sent to %s", clientAddr)
 
 		ticker := time.NewTicker(*interval)
@@ -71,13 +71,16 @@ func main() {
 					payload = generateJunkData(junkLength)
 				}
 
-				msg := fmt.Sprintf("Message %d | Time: %s | Payload: %s\n", 
+				msg := fmt.Sprintf("Message %d | Time: %s | Payload: %s\n",
 					i, time.Now().Format("15:04:05"), payload)
-				
-				fmt.Fprint(w, msg)
+
+				if _, err := fmt.Fprint(w, msg); err != nil {
+					log.Printf("[END] Write failed to %s: %v", clientAddr, err)
+					return
+				}
 				flusher.Flush()
-				
-				cleanMsg := strings.TrimSpace(msg) 
+
+				cleanMsg := strings.TrimSpace(msg)
 				log.Printf("[FLUSH] Data pushed (%d bytes total) -> %s", len(msg), cleanMsg)
 				i++
 			}
