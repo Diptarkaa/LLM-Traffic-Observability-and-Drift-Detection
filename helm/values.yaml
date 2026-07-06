@@ -1,0 +1,49 @@
+createNamespace: false
+
+nameOverride: ""
+fullnameOverride: ""
+
+gateway:
+  hostname: "pugr.serveirc.com"
+  tls:
+    secretName: tls-secret
+
+images:
+  ssEchoServer: owaap.azurecr.io/pugr/sse-echo-server:latest
+  h2cll: owaap.azurecr.io/pugr/h2cll:latest
+  h2c: ghcr.io/philipschmid/echo-app:latest
+  frontend: nginx:alpine
+  grpcInspection: owaap.azurecr.io/pugr/grpc-inspection:latest
+
+sse:
+  safe:
+    replicas: 1
+    interval: "1s"
+  malicious:
+    replicas: 1
+    interval: "1s"
+
+h2cll:
+  safe:
+    replicas: 1
+    interval: "1s"
+  malicious:
+    replicas: 1
+    interval: "1s"
+
+h2c:
+  replicas: 1
+
+frontend:
+  replicas: 1
+
+grpcInspection:
+  replicas: 1
+  debug: true
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"

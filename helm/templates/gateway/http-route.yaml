@@ -1,0 +1,85 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-routes
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+  - name: {{ include "agentic-protection.fullname" . }}-gateway
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /sse
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-sse-malicious-svc
+      port: 8080
+      weight: 50
+    - name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
+      port: 8080
+      weight: 50
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /sse/malicious
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-sse-malicious-svc
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /sse/safe
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /h2c
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-h2c-svc
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /h2cll
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-malicious-svc
+      port: 8080
+      weight: 50
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-safe-svc
+      port: 8080
+      weight: 50
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /h2cll/malicious
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-malicious-svc
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /h2cll/safe
+    timeouts:
+      request: 0s
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-h2cll-safe-svc
+      port: 8080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-frontend-svc
+      port: 80

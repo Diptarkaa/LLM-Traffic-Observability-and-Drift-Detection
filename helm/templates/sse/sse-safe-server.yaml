@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-sse-safe
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.sse.safe.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "agentic-protection.fullname" . }}-sse-safe
+  template:
+    metadata:
+      labels:
+        app: {{ include "agentic-protection.fullname" . }}-sse-safe
+    spec:
+      containers:
+      - name: sse-app
+        image: {{ .Values.images.ssEchoServer }}
+        args:
+          - "--port=8080"
+          - "--interval={{ .Values.sse.safe.interval }}"
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-sse-safe-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: {{ include "agentic-protection.fullname" . }}-sse-safe
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

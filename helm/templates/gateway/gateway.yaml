@@ -1,0 +1,20 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-gateway
+  namespace: {{ .Release.Namespace }}
+spec:
+  gatewayClassName: {{ include "agentic-protection.fullname" . }}-class
+  listeners:
+  - name: http-listener
+    protocol: HTTPS
+    port: 443
+    hostname: {{ .Values.gateway.hostname | quote }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: {{ .Values.gateway.tls.secretName }}
+    allowedRoutes:
+      namespaces:
+        from: Same

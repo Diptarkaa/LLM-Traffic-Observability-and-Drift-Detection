@@ -1,0 +1,21 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyExtensionPolicy
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: {{ include "agentic-protection.fullname" . }}-routes
+  extProc:
+    - backendRefs:
+        - name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-svc
+          port: 9000
+      processingMode:
+        request:
+          body: Buffered
+        response:
+          body: Streamed
+      messageTimeout: 500ms
+      failOpen: false

@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-h2c
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.h2c.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "agentic-protection.fullname" . }}-h2c
+  template:
+    metadata:
+      labels:
+        app: {{ include "agentic-protection.fullname" . }}-h2c
+    spec:
+      containers:
+      - name: echo-container
+        image: {{ .Values.images.h2c }}
+        env:
+        - name: ECHO_APP_H2C
+          value: "true"
+        ports:
+        - name: h2c-port
+          containerPort: 8080
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-h2c-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: {{ include "agentic-protection.fullname" . }}-h2c
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

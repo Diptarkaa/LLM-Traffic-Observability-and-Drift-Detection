@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "agentic-protection.fullname" . }}-frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "agentic-protection.fullname" . }}-frontend
+  template:
+    metadata:
+      labels:
+        app: {{ include "agentic-protection.fullname" . }}-frontend
+    spec:
+      containers:
+      - name: nginx
+        image: {{ .Values.images.frontend }}
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: html-volume
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: html-volume
+        configMap:
+          name: {{ include "agentic-protection.fullname" . }}-frontend-html
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-frontend-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: {{ include "agentic-protection.fullname" . }}-frontend
+  ports:
+  - port: 80
+    targetPort: 80
