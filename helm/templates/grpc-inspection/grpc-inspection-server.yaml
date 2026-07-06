@@ -6,6 +6,7 @@ metadata:
   labels:
     app: grpc-inspection-server
 spec:
+  replicas: {{ .Values.grpcInspection.replicas }}
   selector:
     matchLabels:
       app: grpc-inspection-server

@@ -6,7 +6,7 @@ metadata:
 spec:
   gatewayClassName: envoy-ai-gateway-basic
   listeners:
-  - name: http-listener
+  - name: https-listener
     protocol: HTTPS
     port: 443
     hostname: {{ .Values.gateway.hostname | quote }}

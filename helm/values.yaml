@@ -10,7 +10,7 @@ images:
   h2cll: owaap.azurecr.io/pugr/h2cll:latest
   h2c: ghcr.io/philipschmid/echo-app:latest
   frontend: nginx:alpine
-  grpcInspection: owaap.azurecr.io/pugr/grpc-inspection
+  grpcInspection: owaap.azurecr.io/pugr/grpc-inspection:latest
 
 sse:
   safe:
