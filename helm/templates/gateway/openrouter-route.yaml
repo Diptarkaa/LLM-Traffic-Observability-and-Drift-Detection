@@ -1,0 +1,18 @@
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-openrouter
+  namespace: {{ .Release.Namespace }}
+spec:
+  parentRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: {{ .Values.openrouter.model }}
+      backendRefs:
+        - name: {{ include "agentic-protection.fullname" . }}-openrouter

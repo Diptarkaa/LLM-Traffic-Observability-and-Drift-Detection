@@ -24,6 +24,9 @@ spec:
         - name: html-volume
           mountPath: /usr/share/nginx/html/index.html
           subPath: index.html
+        - name: html-volume
+          mountPath: /usr/share/nginx/html/llm.html
+          subPath: llm.html
       volumes:
       - name: html-volume
         configMap:
