@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat API Tester (OpenAI Protocol)</title>
+    <style>
+        :root {
+            --bg-dark: #000000;
+            --bg-panel: #111111;
+            --bg-input: #222222;
+            --text-main: #e0e0e0;
+            --text-muted: #888888;
+            --accent: #00ff88;
+            --accent-hover: #00cc6a;
+            --accent-secondary: #0088ff;
+            --danger: #ff4444;
+            --danger-hover: #cc0000;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Consolas', 'Courier New', monospace;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        .config-panel {
+            width: 35%;
+            min-width: 350px;
+            max-width: 450px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-panel);
+        }
+
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-dark);
+        }
+
+        .section {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Inputs & Buttons */
+        input, select, textarea {
+            background-color: var(--bg-input);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 0.5rem;
+            font-family: inherit;
+            border-radius: 4px;
+            width: 100%;
+            outline: none;
+            resize: vertical;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button.danger {
+            background-color: var(--danger);
+            color: #fff;
+        }
+
+        button.danger:hover {
+            background-color: var(--danger-hover);
+        }
+
+        button.outline {
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        button.outline:hover {
+            background-color: var(--bg-input);
+            border-color: var(--text-muted);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Scrollable Areas */
+        .scrollable {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        /* Headers Builder */
+        .header-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            align-items: center;
+        }
+
+        .header-row input[type="text"] {
+            flex: 1;
+        }
+
+        .header-row input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        /* Response Headers Meta */
+        .response-meta {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--bg-panel);
+            font-size: 0.85rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: bold;
+            background-color: var(--border);
+            margin-left: 0.5rem;
+        }
+        .status-badge.success { background-color: #004d28; color: var(--accent); }
+        .status-badge.error { background-color: #4d0000; color: var(--danger); }
+
+        .headers-display {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            word-break: break-word;
+            white-space: pre-wrap;
+            animation: fadeIn 0.3s ease-out;
+            line-height: 1.4;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            margin-bottom: 0.4rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--bg-input);
+            border: 1px solid var(--accent-secondary);
+            border-bottom-right-radius: 0;
+        }
+        .message.user .message-meta { color: var(--accent-secondary); }
+
+        .message.assistant {
+            align-self: flex-start;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-bottom-left-radius: 0;
+        }
+        .message.assistant .message-meta { color: var(--accent); }
+
+        .message.system-log {
+            align-self: center;
+            background-color: transparent;
+            color: var(--text-muted);
+            font-style: italic;
+            border: 1px dashed var(--border);
+            text-align: center;
+            max-width: 90%;
+            font-size: 0.85rem;
+        }
+
+        .message.error {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* Reasoning Interface */
+        .reasoning-details {
+            margin-bottom: 0.75rem;
+            border-left: 2px solid var(--border);
+            padding-left: 0.5rem;
+        }
+
+        .reasoning-details summary {
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            user-select: none;
+            font-style: italic;
+        }
+        
+        .reasoning-details summary:hover {
+            color: var(--text-main);
+        }
+
+        .reasoning-content {
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+            color: #aaaaaa;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* Input Area */
+        .chat-input-area {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background-color: var(--bg-panel);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .chat-input-area textarea {
+            flex: 1;
+            min-height: 60px;
+            max-height: 200px;
+        }
+
+        .chat-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            min-width: 120px;
+        }
+
+        /* Checkbox toggle */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-main);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Left Configuration Panel -->
+    <div class="config-panel">
+        <div class="section">
+            <div class="section-title">OpenAI API Configuration</div>
+            
+            <div class="input-group">
+                <label>Endpoint URL</label>
+                <input type="text" id="req-url" value="https://pugr.serveirc.com/v1/chat/completions" placeholder="https://api.openai.com/v1/chat/completions">
+            </div>
+
+            <div class="input-group">
+                <label>Model</label>
+                <input type="text" id="req-model" value="nvidia/nemotron-3-ultra-550b-a55b:free" placeholder="gpt-3.5-turbo, gpt-4, etc.">
+            </div>
+
+            <div class="input-group" style="margin-top: 1rem;">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="req-stream" checked style="width: auto;"> 
+                    Stream Response (SSE)
+                </label>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">System Prompt</div>
+            <textarea id="req-system-prompt" rows="3" placeholder="You are a helpful AI assistant."></textarea>
+        </div>
+
+        <div class="section scrollable">
+            <div class="section-title">
+                Additional Headers
+                <button class="outline" onclick="addHeaderRow()" style="padding: 0.1rem 0.4rem; font-size: 0.7rem;">+ Add</button>
+            </div>
+            <div id="headers-container">
+                <!-- Content-Type is implied, but let user see how it works -->
+                <div class="header-row">
+                    <input type="checkbox" class="header-enable" checked title="Enable/Disable Header">
+                    <input type="text" placeholder="Key" value="Content-Type">
+                    <input type="text" placeholder="Value" value="application/json">
+                    <button class="danger" onclick="this.parentElement.remove()">X</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <button class="outline" style="width: 100%;" onclick="clearChat()">Clear Chat History</button>
+        </div>
+    </div>
+
+    <!-- Right Chat Panel -->
+    <div class="chat-panel">
+        <!-- Response Meta Headers -->
+        <div class="response-meta" id="response-meta" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong>Latest Response:</strong> 
+                    <span id="res-status" class="status-badge"></span>
+                </div>
+                <button class="outline" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="toggleHeadersDisplay()">Toggle Headers</button>
+            </div>
+            <div id="res-headers" class="headers-display"></div>
+        </div>
+        
+        <!-- Chat History -->
+        <div class="scrollable chat-container" id="chat-container">
+            <div class="message system-log" id="placeholder-text">
+                Chat history will appear here. Messages are sent as an array mimicking the OpenAI protocol.
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+            <textarea id="chat-input" placeholder="Type your message here... (Ctrl+Enter to send)"></textarea>
+            <div class="chat-actions">
+                <button id="btn-send" onclick="handleSend()">Send Message</button>
+                <button id="btn-abort" class="danger" style="display: none;" onclick="abortRequest()">Stop Generation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let abortController = null;
+    let chatMessages = []; // Holds the internal state of the conversation
+
+    // Auto-resize textarea and handle Ctrl+Enter
+    const chatInput = document.getElementById('chat-input');
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+
+    function addHeaderRow(key = '', value = '') {
+        const container = document.getElementById('headers-container');
+        const row = document.createElement('div');
+        row.className = 'header-row';
+        row.innerHTML = `
+            <input type="checkbox" class="header-enable" checked title="Enable/Disable Header">
+            <input type="text" placeholder="Key" value="${escapeHTML(key)}">
+            <input type="text" placeholder="Value" value="${escapeHTML(value)}">
+            <button class="danger" onclick="this.parentElement.remove()">X</button>
+        `;
+        container.appendChild(row);
+    }
+
+    function getCustomHeaders() {
+        const headers = {};
+        const rows = document.querySelectorAll('.header-row');
+        rows.forEach(row => {
+            const isEnabled = row.querySelector('.header-enable').checked;
+            if (!isEnabled) return;
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const key = inputs[0].value.trim();
+            const val = inputs[1].value.trim();
+            if (key) headers[key] = val;
+        });
+        return headers;
+    }
+
+    function toggleHeadersDisplay() {
+        const el = document.getElementById('res-headers');
+        el.style.display = el.style.display === 'block' ? 'none' : 'block';
+    }
+
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+
+    // Appends a new message block to the UI and returns the text container element
+    function createMessageUI(role, text = '', isError = false) {
+        const container = document.getElementById('chat-container');
+        document.getElementById('placeholder-text').style.display = 'none';
+
+        const msgEl = document.createElement('div');
+        msgEl.className = `message ${role} ${isError ? 'error' : ''}`;
+        
+        if (role === 'system-log') {
+            msgEl.textContent = text;
+        } else {
+            msgEl.innerHTML = `
+                <div class="message-meta">${role === 'user' ? 'You' : 'Assistant'}</div>
+                <div class="message-content">${escapeHTML(text)}</div>
+            `;
+        }
+
+        container.appendChild(msgEl);
+        container.scrollTop = container.scrollHeight;
+        
+        return {
+            container: msgEl,
+            content: msgEl.querySelector('.message-content')
+        };
+    }
+
+    // Updates text continuously during streaming
+    function updateMessageUI(element, newTextChunk) {
+        if (!element) return;
+        // Append escaped chunk
+        element.innerHTML += escapeHTML(newTextChunk);
+        
+        // Auto-scroll logic
+        const container = document.getElementById('chat-container');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function clearChat() {
+        chatMessages = [];
+        document.getElementById('chat-container').innerHTML = `
+            <div class="message system-log" id="placeholder-text">
+                Chat history cleared.
+            </div>
+        `;
+        document.getElementById('response-meta').style.display = 'none';
+    }
+
+    function toggleButtons(isStreaming) {
+        document.getElementById('btn-send').style.display = isStreaming ? 'none' : 'block';
+        document.getElementById('btn-abort').style.display = isStreaming ? 'block' : 'none';
+        document.getElementById('chat-input').disabled = isStreaming;
+    }
+
+    function abortRequest() {
+        if (abortController) {
+            abortController.abort();
+            createMessageUI('system-log', "Generation stopped by user.");
+            toggleButtons(false);
+        }
+    }
+
+    function buildOpenAIPayload(userMessage) {
+        const model = document.getElementById('req-model').value || 'gpt-3.5-turbo';
+        const stream = document.getElementById('req-stream').checked;
+        const systemPrompt = document.getElementById('req-system-prompt').value.trim();
+
+        // Rebuild context on every send based on our state + new message
+        const payloadMessages = [];
+        
+        if (systemPrompt) {
+            payloadMessages.push({ role: "system", content: systemPrompt });
+        }
+
+        // Add history
+        payloadMessages.push(...chatMessages);
+
+        // Add new message
+        payloadMessages.push({ role: "user", content: userMessage });
+
+        return {
+            model: model,
+            messages: payloadMessages,
+            stream: stream
+        };
+    }
+
+    async function handleSend() {
+        const inputEl = document.getElementById('chat-input');
+        const userText = inputEl.value.trim();
+        
+        if (!userText) return;
+
+        const url = document.getElementById('req-url').value;
+        const isStream = document.getElementById('req-stream').checked;
+
+        // 1. Update UI for User
+        createMessageUI('user', userText);
+        inputEl.value = '';
+
+        // 2. Build Payload
+        const payload = buildOpenAIPayload(userText);
+        
+        // Save user message to history
+        chatMessages.push({ role: "user", content: userText });
+
+        // 3. Prepare Headers
+        const headers = getCustomHeaders();
+
+        abortController = new AbortController();
+        toggleButtons(true);
+
+        // UI Prep for Assistant Response
+        let assistantUI = null;
+        let completeAssistantText = "";
+        let completeReasoningText = "";
+        let reasoningDetailsEl = null;
+        let assistantReasoningContentEl = null;
+        let hasReceivedContent = false;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: headers,
+                body: JSON.stringify(payload),
+                signal: abortController.signal
+            });
+
+            // Handle Response Meta (Headers/Status)
+            const metaContainer = document.getElementById('response-meta');
+            const statusEl = document.getElementById('res-status');
+            const headersEl = document.getElementById('res-headers');
+            
+            metaContainer.style.display = 'block';
+            statusEl.textContent = `${response.status} ${response.statusText}`;
+            statusEl.className = 'status-badge ' + (response.ok ? 'success' : 'error');
+
+            let headersText = '';
+            response.headers.forEach((val, key) => { headersText += `${key}: ${val}\n`; });
+            headersEl.textContent = headersText || 'No headers received.';
+
+            // Check for HTTP errors
+            if (!response.ok) {
+                const errorData = await response.text();
+                createMessageUI('assistant', `HTTP Error ${response.status}:\n${errorData}`, true);
+                chatMessages.pop(); // Remove user message from history on failure if desired, but standard chats keep it.
+                return;
+            }
+
+            assistantUI = createMessageUI('assistant', '');
+
+            // Handle Streaming
+            if (isStream) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Split buffer by newlines
+                    let lines = buffer.split('\n');
+                    
+                    // The last line might be incomplete, keep it in the buffer
+                    buffer = lines.pop();
+
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (!line || line.startsWith(':')) continue; // Skip empty lines and SSE comments
+
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.substring(6);
+                            
+                            if (dataStr === '[DONE]') {
+                                // Stream finished
+                                continue;
+                            }
+
+                            try {
+                                const parsed = JSON.parse(dataStr);
+                                const delta = parsed.choices?.[0]?.delta || {};
+                                
+                                const reasoningDelta = delta.reasoning_content || delta.reasoning || "";
+                                const contentDelta = delta.content || "";
+
+                                // Handle Reasoning stream
+                                if (reasoningDelta) {
+                                    if (!reasoningDetailsEl) {
+                                        reasoningDetailsEl = document.createElement('details');
+                                        reasoningDetailsEl.className = 'reasoning-details';
+                                        reasoningDetailsEl.open = true; // Auto-expand initially
+                                        reasoningDetailsEl.innerHTML = `<summary>Thinking Process</summary><div class="reasoning-content"></div>`;
+                                        assistantUI.container.insertBefore(reasoningDetailsEl, assistantUI.content);
+                                        assistantReasoningContentEl = reasoningDetailsEl.querySelector('.reasoning-content');
+                                    }
+                                    completeReasoningText += reasoningDelta;
+                                    assistantReasoningContentEl.innerHTML += escapeHTML(reasoningDelta);
+                                }
+
+                                // Handle standard message stream
+                                if (contentDelta) {
+                                    // Collapse reasoning automatically when standard content begins
+                                    if (reasoningDetailsEl && reasoningDetailsEl.open && !hasReceivedContent) {
+                                        reasoningDetailsEl.open = false;
+                                    }
+                                    hasReceivedContent = true;
+                                    
+                                    completeAssistantText += contentDelta;
+                                    updateMessageUI(assistantUI.content, contentDelta);
+                                }
+                            } catch (e) {
+                                console.warn('Failed to parse SSE line:', dataStr, e);
+                            }
+                        }
+                    }
+                }
+            } 
+            // Handle Non-Streaming (Standard JSON)
+            else {
+                const data = await response.json();
+                const msg = data.choices?.[0]?.message || {};
+                
+                completeAssistantText = msg.content || "";
+                completeReasoningText = msg.reasoning_content || msg.reasoning || "";
+
+                if (completeReasoningText) {
+                    reasoningDetailsEl = document.createElement('details');
+                    reasoningDetailsEl.className = 'reasoning-details';
+                    // Render closed by default in single-shot mode if there is standard content accompanying it
+                    if (!completeAssistantText) reasoningDetailsEl.open = true;
+                    reasoningDetailsEl.innerHTML = `<summary>Thinking Process</summary><div class="reasoning-content">${escapeHTML(completeReasoningText)}</div>`;
+                    assistantUI.container.insertBefore(reasoningDetailsEl, assistantUI.content);
+                }
+                
+                updateMessageUI(assistantUI.content, completeAssistantText);
+            }
+
+            // Save assistant response to history (excluding reasoning as per standard OpenAI flow)
+            if (completeAssistantText) {
+                chatMessages.push({ role: "assistant", content: completeAssistantText });
+            }
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                // Handled in abortRequest
+            } else {
+                createMessageUI('system-log', `Request Failed: ${error.message}`);
+                // Remove the failed user message from history so they can retry
+                chatMessages.pop(); 
+            }
+        } finally {
+            toggleButtons(false);
+            abortController = null;
+        }
+    }
+</script>
+</body>
+</html>

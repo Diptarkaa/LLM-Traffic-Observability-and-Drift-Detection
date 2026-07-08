@@ -20,6 +20,7 @@ spec:
     - name: sse-safe-app-svc
       port: 8080
       weight: 50
+
   - matches:
     - path:
         type: PathPrefix
@@ -29,6 +30,7 @@ spec:
     backendRefs:
     - name: sse-malicious-app-svc
       port: 8080
+
   - matches:
     - path:
         type: PathPrefix
@@ -38,6 +40,7 @@ spec:
     backendRefs:
     - name: sse-safe-app-svc
       port: 8080
+
   - matches:
     - path:
         type: PathPrefix
@@ -45,6 +48,7 @@ spec:
     backendRefs:
     - name: h2c-app-svc
       port: 8080
+
   - matches:
     - path:
         type: PathPrefix
@@ -58,6 +62,7 @@ spec:
     - name: h2cll-safe-app-svc
       port: 8080
       weight: 50
+
   - matches:
     - path:
         type: PathPrefix
@@ -67,6 +72,7 @@ spec:
     backendRefs:
     - name: h2cll-malicious-app-svc
       port: 8080
+
   - matches:
     - path:
         type: PathPrefix
@@ -76,6 +82,35 @@ spec:
     backendRefs:
     - name: h2cll-safe-app-svc
       port: 8080
+
+  - matches:
+    - path:
+        type: Exact
+        value: /llm
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /llm.html
+    backendRefs:
+    - name: frontend-svc
+      port: 80
+
+  - matches:
+    - path:
+        type: Exact
+        value: /
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /index.html
+    backendRefs:
+    - name: frontend-svc
+      port: 80
+
   - matches:
     - path:
         type: PathPrefix
@@ -83,4 +118,3 @@ spec:
     backendRefs:
     - name: frontend-svc
       port: 80
-
