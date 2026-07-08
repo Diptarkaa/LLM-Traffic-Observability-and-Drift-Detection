@@ -41,6 +41,7 @@ type StreamContext struct {
 	RequestBody     string
 	ResponseHeaders map[string]string
 	ResponseBody    string
+	ContentEncoding string
 }
 
 // Inspector defines how payloads should be evaluated.
