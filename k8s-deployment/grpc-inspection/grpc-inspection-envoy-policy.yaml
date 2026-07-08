@@ -4,10 +4,13 @@ metadata:
   name: grpc-inspection-policy
   namespace: llmg
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: prod-routes 
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: prod-routes
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: openrouter
   extProc:
     - backendRefs:
         - name: grpc-inspection-service

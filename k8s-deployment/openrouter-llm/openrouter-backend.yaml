@@ -1,0 +1,60 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: openrouter
+  namespace: llmg
+spec:
+  endpoints:
+    - fqdn:
+        hostname: openrouter.ai
+        port: 443
+
+---
+
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: openrouter-tls-policy
+  namespace: llmg
+spec:
+  targetRefs:
+    - group: "gateway.envoyproxy.io"
+      kind: Backend
+      name: openrouter
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: openrouter.ai
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: openrouter
+  namespace: llmg
+spec:
+  schema:
+    name: OpenAI
+    prefix: "/api/v1"
+  backendRef:
+    name: openrouter
+    kind: Backend
+    group: gateway.envoyproxy.io
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: openrouter-apikey
+  namespace: llmg
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: openrouter
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: openrouter-apikey
+      namespace: llmg
