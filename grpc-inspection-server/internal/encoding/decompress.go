@@ -92,10 +92,17 @@ func (d *Decompressor) Decompress(data []byte, endOfStream bool) ([]byte, error)
 			case chunk := <-d.outChan:
 				decompressed = append(decompressed, chunk...)
 			case err := <-d.errChan:
-				if err != nil && err != io.EOF {
-					return decompressed, err
+				for {
+					select {
+					case chunk := <-d.outChan:
+						decompressed = append(decompressed, chunk...)
+					default:
+						if err != nil && err != io.EOF {
+							return decompressed, err
+						}
+						break drainLoop
+					}
 				}
-				break drainLoop
 			}
 		}
 	} else {
@@ -105,10 +112,17 @@ func (d *Decompressor) Decompress(data []byte, endOfStream bool) ([]byte, error)
 			case chunk := <-d.outChan:
 				decompressed = append(decompressed, chunk...)
 			case err := <-d.errChan:
-				if err != nil && err != io.EOF {
-					return decompressed, err
+				for {
+					select {
+					case chunk := <-d.outChan:
+						decompressed = append(decompressed, chunk...)
+					default:
+						if err != nil && err != io.EOF {
+							return decompressed, err
+						}
+						break readLoop
+					}
 				}
-				break readLoop
 			default:
 				break readLoop
 			}

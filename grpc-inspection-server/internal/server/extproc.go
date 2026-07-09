@@ -34,6 +34,11 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 		ResponseHeaders: make(map[string]string),
 	}
 	var decompressor *encoding.Decompressor
+	defer func() {
+		if decompressor != nil {
+			decompressor.Close()
+		}
+	}()
 
 	// Continuously read messages from the stream until closed.
 	for {
