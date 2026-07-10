@@ -10,7 +10,7 @@ spec:
       name: {{ include "agentic-protection.fullname" . }}-routes
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: {{ include "agentic-protection.fullname" . }}-openrouter
+      name: {{ include "agentic-protection.fullname" . }}-llmgroute
   extProc:
     - backendRefs:
         - name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-svc
