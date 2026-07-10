@@ -8,6 +8,10 @@ gateway:
   tls:
     secretName: tls-secret
 
+localLlm:
+  address: "172.232.102.99"
+  port: 80
+
 openrouter:
   hostname: "openrouter.ai"
   model: "nvidia/nemotron-3-ultra-550b-a55b:free"

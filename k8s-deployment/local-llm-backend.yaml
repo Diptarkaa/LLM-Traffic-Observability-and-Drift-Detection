@@ -1,0 +1,25 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: local-llm
+  namespace: llmg
+spec:
+  endpoints:
+    - ip:
+        address: 172.232.102.99
+        port: 80
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: local-llm
+  namespace: llmg
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: local-llm
+    kind: Backend
+    group: gateway.envoyproxy.io

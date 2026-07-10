@@ -1,7 +1,7 @@
 apiVersion: aigateway.envoyproxy.io/v1beta1
 kind: AIGatewayRoute
 metadata:
-  name: {{ include "agentic-protection.fullname" . }}-openrouter
+  name: {{ include "agentic-protection.fullname" . }}-llmgroute
   namespace: {{ .Release.Namespace }}
 spec:
   parentRefs:
@@ -16,3 +16,10 @@ spec:
               value: {{ .Values.openrouter.model }}
       backendRefs:
         - name: {{ include "agentic-protection.fullname" . }}-openrouter
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: local
+      backendRefs:
+        - name: {{ include "agentic-protection.fullname" . }}-local-llm

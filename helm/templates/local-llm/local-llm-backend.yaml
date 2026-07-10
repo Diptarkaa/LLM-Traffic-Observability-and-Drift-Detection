@@ -1,0 +1,25 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-local-llm
+  namespace: {{ .Release.Namespace }}
+spec:
+  endpoints:
+    - ip:
+        address: {{ .Values.localLlm.address }}
+        port: {{ .Values.localLlm.port }}
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-local-llm
+  namespace: {{ .Release.Namespace }}
+spec:
+  schema:
+    name: OpenAI
+  backendRef:
+    name: {{ include "agentic-protection.fullname" . }}-local-llm
+    kind: Backend
+    group: gateway.envoyproxy.io
