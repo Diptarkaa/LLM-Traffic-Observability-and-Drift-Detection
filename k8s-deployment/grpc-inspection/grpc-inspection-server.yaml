@@ -19,6 +19,11 @@ spec:
         image: owaap.azurecr.io/pugr/grpc-inspection
         args:
           - "--debug"
+          - "--bridge-enabled=true"
+          - "--bridge-url=http://kafka-bridge:8082/events"
+          - "--bridge-timeout-ms=500"
+          - "--bridge-queue-size=4096"
+          - "--capture-sample-rate=1.0"
         imagePullPolicy: Always
         ports:
           - containerPort: 9000

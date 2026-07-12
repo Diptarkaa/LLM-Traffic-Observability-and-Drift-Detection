@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redpanda
+  namespace: llmg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redpanda
+  template:
+    metadata:
+      labels:
+        app: redpanda
+    spec:
+      containers:
+      - name: redpanda
+        image: redpandadata/redpanda:v24.2.8
+        args:
+          - redpanda
+          - start
+          - --overprovisioned
+          - --smp
+          - "1"
+          - --memory
+          - "512M"
+          - --reserve-memory
+          - "0M"
+          - --check=false
+          - --kafka-addr
+          - internal://0.0.0.0:9092
+          - --advertise-kafka-addr
+          - internal://redpanda.llmg.svc.cluster.local:9092
+        ports:
+          - containerPort: 9092
+            name: kafka
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redpanda
+  namespace: llmg
+spec:
+  selector:
+    app: redpanda
+  ports:
+    - name: kafka
+      port: 9092
+      targetPort: 9092

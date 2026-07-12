@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-bridge
+  namespace: llmg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-bridge
+  template:
+    metadata:
+      labels:
+        app: kafka-bridge
+    spec:
+      containers:
+      - name: kafka-bridge
+        image: owaap.azurecr.io/pugr/kafka-bridge:latest
+        imagePullPolicy: Always
+        env:
+          - name: KAFKA_BOOTSTRAP_SERVERS
+            value: redpanda:9092
+          - name: KAFKA_TOPIC
+            value: envoy.capture.events
+          - name: EVENT_QUEUE_SIZE
+            value: "10000"
+          - name: LOG_LEVEL
+            value: INFO
+        ports:
+          - containerPort: 8082
+            name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-bridge
+  namespace: llmg
+spec:
+  selector:
+    app: kafka-bridge
+  ports:
+    - name: http
+      port: 8082
+      targetPort: 8082

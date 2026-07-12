@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  redpanda:
+    image: redpandadata/redpanda:v24.2.8
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp
+      - "1"
+      - --memory
+      - "1G"
+      - --reserve-memory
+      - "0M"
+      - --node-id
+      - "0"
+      - --check=false
+      - --kafka-addr
+      - internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr
+      - internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr
+      - internal://0.0.0.0:8083
+      - --advertise-pandaproxy-addr
+      - internal://redpanda:8083
+    ports:
+      - "19092:19092"
+      - "9644:9644"
+
+  kafka-bridge:
+    build:
+      context: ./sidecar/kafka-bridge
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      KAFKA_TOPIC: envoy.capture.events
+      EVENT_QUEUE_SIZE: "10000"
+      LOG_LEVEL: INFO
+    ports:
+      - "8082:8082"
+    depends_on:
+      - redpanda
