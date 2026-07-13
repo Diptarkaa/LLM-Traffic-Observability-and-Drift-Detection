@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-sse-malicious
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.sse.malicious.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "agentic-protection.fullname" . }}-sse-malicious
+  template:
+    metadata:
+      labels:
+        app: {{ include "agentic-protection.fullname" . }}-sse-malicious
+    spec:
+      containers:
+      - name: sse-malicious-app
+        image: {{ .Values.images.ssEchoServer }}
+        args:
+          - "--port=8080"
+          - "--interval={{ .Values.sse.malicious.interval }}"
+          - "--malicious"
+        ports:
+        - containerPort: 8080
+          name: h2c
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-sse-malicious-svc
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: {{ include "agentic-protection.fullname" . }}-sse-malicious
+  ports:
+  - name: h2c-port
+    port: 8080
+    targetPort: 8080
+    appProtocol: h2c

@@ -1,0 +1,25 @@
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIGatewayRoute
+metadata:
+  name: agentic-protection-llmgroute
+  namespace: llmg
+spec:
+  parentRefs:
+    - name: agentic-protection-gateway
+      kind: Gateway
+      group: gateway.networking.k8s.io
+  rules:
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: nvidia/nemotron-3-ultra-550b-a55b:free
+      backendRefs:
+        - name: openrouter
+    - matches:
+        - headers:
+            - type: Exact
+              name: x-ai-eg-model
+              value: local
+      backendRefs:
+        - name: local-llm

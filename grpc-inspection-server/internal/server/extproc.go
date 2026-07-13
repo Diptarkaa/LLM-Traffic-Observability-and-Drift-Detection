@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/AkamaiAAPH/agentic-protection/internal/capture"
+	"github.com/AkamaiAAPH/agentic-protection/internal/encoding"
 	"github.com/AkamaiAAPH/agentic-protection/internal/inspector"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -136,6 +137,12 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 		RequestHeaders:  make(map[string]string),
 		ResponseHeaders: make(map[string]string),
 	}
+	var decompressor *encoding.Decompressor
+	defer func() {
+		if decompressor != nil {
+			decompressor.Close()
+		}
+	}()
 
 	streamID := fmt.Sprintf("stream-%d", s.streamSeq.Add(1))
 	captureState := &streamCaptureState{
@@ -220,7 +227,13 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 					val = header.Value
 				}
 				fmt.Fprintf(&headerStr, "%s: %s\n", header.Key, val)
+
+				if strings.EqualFold(header.Key, "content-encoding") {
+					streamContext.ContentEncoding = val
+				}
 			}
+
+			decompressor = encoding.New(streamContext.ContentEncoding)
 
 			payloadStr = strings.TrimSpace(headerStr.String())
 			payloadType = inspector.ResponseHeader
@@ -231,7 +244,21 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
 			slog.Debug("Processing Response Body")
-			payloadStr = string(payload.ResponseBody.Body)
+			rawBytes := payload.ResponseBody.Body
+			endOfStream := payload.ResponseBody.EndOfStream
+
+			if decompressor == nil {
+				decompressor = encoding.New(streamContext.ContentEncoding)
+			}
+
+			decompressedBytes, err := decompressor.Decompress(rawBytes, endOfStream)
+			if err != nil {
+				slog.Error("Decompression error", "err", err)
+				payloadStr = string(rawBytes)
+			} else {
+				payloadStr = string(decompressedBytes)
+			}
+
 			payloadType = inspector.ResponseBody
 			endOfStream = payload.ResponseBody.EndOfStream
 			frameType = "response_body"

@@ -1,19 +1,19 @@
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyExtensionPolicy
 metadata:
-  name: grpc-inspection-policy
-  namespace: llmg
+  name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-policy
+  namespace: {{ .Release.Namespace }}
 spec:
   targetRefs:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: prod-routes
+      name: {{ include "agentic-protection.fullname" . }}-routes
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
-      name: openrouter
+      name: {{ include "agentic-protection.fullname" . }}-llmgroute
   extProc:
     - backendRefs:
-        - name: grpc-inspection-service
+        - name: {{ include "agentic-protection.fullname" . }}-grpc-inspection-svc
           port: 9000
       processingMode:
         request:
