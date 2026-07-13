@@ -44,6 +44,6 @@ One event per ext_proc frame (request_headers, request_body, response_headers, r
 - inspection decision at that frame (safe/warn/block)
 
 ## Failure Mode Expectations
-- Bridge down: extproc logs warnings, drops capture, traffic continues.
+- Bridge down: extproc continues (events may be dropped by the bridge emitter on HTTP errors; current implementation does not log per-event failures by default), traffic continues.
 - Bridge queue full: event dropped, traffic continues.
 - Kafka down: bridge logs forwarding errors, extproc unaffected.
