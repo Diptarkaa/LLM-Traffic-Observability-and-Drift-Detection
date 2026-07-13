@@ -55,6 +55,11 @@ _worker = threading.Thread(target=_producer_loop, daemon=True)
 _worker.start()
 
 
+@app.on_event("shutdown")
+def _on_shutdown() -> None:
+    _stop_event.set()
+    _worker.join(timeout=5)
+
 @app.get("/healthz")
 def healthz() -> Dict[str, Any]:
     return {
