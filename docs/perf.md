@@ -10,7 +10,7 @@ Measure incremental latency with capture enabled vs disabled at 100 RPS for 5 mi
 
 ## Configuration
 - capture sample rate: 1.0
-- capture body cap: 32768 bytes
+- capture body cap: none (currently emits full ext_proc frame bodies)
 - bridge timeout: 500ms
 - bridge queue size: 4096
 
