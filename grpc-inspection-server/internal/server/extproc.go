@@ -209,6 +209,9 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			// Reconstruct headers into a single string for inspection.
 			for _, header := range payload.ResponseHeaders.Headers.Headers {
+				if header == nil {
+					continue
+				}
 				val := string(header.RawValue)
 				if val == "" {
 					val = header.Value
