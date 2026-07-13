@@ -1,6 +1,6 @@
 # Agentic Protection — Helm Chart
 
-Helm chart for the Agentic Protection demo stack: SSE, H2C, and H2CLL backend servers fronted by an Envoy AI Gateway with gRPC-based traffic inspection.
+Helm chart for the Agentic Protection demo stack: SSE, H2C, and H2CLL backend servers, an OpenRouter-backed LLM chat frontend (`/llm`), fronted by an Envoy AI Gateway with gRPC-based traffic inspection.
 
 ---
 
@@ -8,16 +8,16 @@ Helm chart for the Agentic Protection demo stack: SSE, H2C, and H2CLL backend se
 
 ### 1. Envoy Gateway
 
-Install [Envoy Gateway](https://gateway.envoyproxy.io/docs/tasks/quickstart/) into your cluster:
+Install [Envoy Gateway](https://aigateway.envoyproxy.io/docs/getting-started/prerequisites) into your cluster:
 
 ```bash
-helm install eg oci://docker.io/envoyproxy/gateway-helm --version v1.8.2 -n envoy-gateway-system --create-namespace
-```
+helm upgrade -i eg oci://docker.io/envoyproxy/gateway-helm \
+  --version v1.8.1 \
+  --namespace envoy-gateway-system \
+  --create-namespace \
+  -f https://raw.githubusercontent.com/envoyproxy/ai-gateway/main/manifests/envoy-gateway-values.yaml
 
-Wait for the controller to be ready:
-
-```bash
-kubectl wait --timeout=5m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
+kubectl wait --timeout=2m -n envoy-gateway-system deployment/envoy-gateway --for=condition=Available
 ```
 
 ### 2. Envoy AI Gateway
@@ -54,6 +54,9 @@ All configurable values are in [`values.yaml`](./values.yaml). Key parameters:
 | `fullnameOverride` | `""` | Override the full resource name prefix entirely |
 | `gateway.hostname` | `pugr.serveirc.com` | Public hostname exposed by the Gateway |
 | `gateway.tls.secretName` | `tls-secret` | Name of the TLS Secret referenced by the Gateway |
+| `openrouter.hostname` | `openrouter.ai` | Upstream OpenRouter API hostname |
+| `openrouter.model` | `nvidia/nemotron-3-ultra-550b-a55b:free` | Model identifier matched via the `x-ai-eg-model` header and used by the `/llm` frontend |
+| `openrouter.apikeySecretName` | `openrouter-apikey` | Name of the Secret holding the OpenRouter API key, referenced by the `BackendSecurityPolicy` |
 | `images.*` | see values.yaml | Container images for each component |
 
 ---
@@ -116,10 +119,10 @@ Run the cert setup script from the `k8s-deployment/certs/` directory, passing yo
 
 ```bash
 # From the repo root
-cd k8s-deployment/certs
+cd k8s-deployment
 
 # Edit cert-setup.sh: replace the CN value with your hostname, namespace with target namespace, then run:
-bash cert-setup.sh
+bash ./certs/cert-setup.sh
 ```
 
 The script runs:
@@ -130,6 +133,20 @@ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 \
 
 kubectl -n <namespace> create secret tls tls-secret --key=certs/cert.key --cert=certs/cert.crt
 ```
+
+### Step 4: Provision the OpenRouter API key
+
+The `/llm` route proxies requests to OpenRouter through the Envoy AI Gateway, which authenticates using an API key stored in a Secret referenced by `openrouter.apikeySecretName` (default `openrouter-apikey`). Create it in the target namespace before sending traffic:
+
+```bash
+export OPENROUTER_API_KEY=your-openrouter-api-key
+
+kubectl create secret generic openrouter-apikey \
+  --namespace llmg \
+  --from-literal=apiKey="${OPENROUTER_API_KEY}"
+```
+
+If you override `openrouter.apikeySecretName`, use the same name for the Secret created above.
 
 ---
 
@@ -146,6 +163,7 @@ helm/
     │   ├── gateway-class.yaml
     │   ├── gateway.yaml
     │   ├── http-route.yaml
+    │   ├── openrouter-route.yaml
     │   └── network-policy.yaml
     ├── sse/
     │   ├── sse-safe-server.yaml
@@ -158,6 +176,8 @@ helm/
     ├── frontend/
     │   ├── frontend-configmap.yaml
     │   └── frontend-server.yaml
+    ├── openrouter-llm/
+    │   └── openrouter-backend.yaml
     └── grpc-inspection/
         ├── grpc-inspection-server.yaml
         └── grpc-inspection-envoy-policy.yaml

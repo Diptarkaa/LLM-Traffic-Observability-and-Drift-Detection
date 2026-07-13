@@ -78,6 +78,32 @@ spec:
       port: 8080
   - matches:
     - path:
+        type: Exact
+        value: /llm
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /llm.html
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-frontend-svc
+      port: 80
+  - matches:
+    - path:
+        type: Exact
+        value: /
+    filters:
+    - type: URLRewrite
+      urlRewrite:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /index.html
+    backendRefs:
+    - name: {{ include "agentic-protection.fullname" . }}-frontend-svc
+      port: 80
+  - matches:
+    - path:
         type: PathPrefix
         value: /
     backendRefs:

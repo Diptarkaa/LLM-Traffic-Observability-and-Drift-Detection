@@ -1,0 +1,60 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-openrouter
+  namespace: {{ .Release.Namespace }}
+spec:
+  endpoints:
+    - fqdn:
+        hostname: {{ .Values.openrouter.hostname }}
+        port: 443
+
+---
+
+apiVersion: gateway.networking.k8s.io/v1alpha3
+kind: BackendTLSPolicy
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-openrouter-tls-policy
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRefs:
+    - group: "gateway.envoyproxy.io"
+      kind: Backend
+      name: {{ include "agentic-protection.fullname" . }}-openrouter
+  validation:
+    wellKnownCACertificates: "System"
+    hostname: {{ .Values.openrouter.hostname }}
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: AIServiceBackend
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-openrouter
+  namespace: {{ .Release.Namespace }}
+spec:
+  schema:
+    name: OpenAI
+    prefix: "/api/v1"
+  backendRef:
+    name: {{ include "agentic-protection.fullname" . }}-openrouter
+    kind: Backend
+    group: gateway.envoyproxy.io
+
+---
+
+apiVersion: aigateway.envoyproxy.io/v1beta1
+kind: BackendSecurityPolicy
+metadata:
+  name: {{ include "agentic-protection.fullname" . }}-openrouter-apikey
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRefs:
+    - group: aigateway.envoyproxy.io
+      kind: AIServiceBackend
+      name: {{ include "agentic-protection.fullname" . }}-openrouter
+  type: APIKey
+  apiKey:
+    secretRef:
+      name: {{ .Values.openrouter.apikeySecretName }}
+      namespace: {{ .Release.Namespace }}
