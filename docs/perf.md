@@ -34,3 +34,8 @@ Fill this table after your run:
 ## Acceptance Check
 - p99 delta should stay below 20ms.
 - If above 20ms, reduce sample rate and re-measure.
+
+## Week 4 Embedding Throughput Note
+- Embeddings are currently CPU-based using `nomic-ai/nomic-embed-text-v1`.
+- Batch size defaults to `32` to improve throughput on CPU.
+- GPU acceleration is tracked as future optimization and intentionally out-of-scope for this week.

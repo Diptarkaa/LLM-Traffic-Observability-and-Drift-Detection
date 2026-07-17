@@ -1,1 +1,15 @@
 .DS_Store
+.venv/
+.vscode/
+
+# Python build/cache artifacts
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# Accidental local Go build output (go build with no -o produces a binary
+# named after the module directory, sitting right next to the source)
+/h2cll/h2cll
+/sse-echo-server/sse-echo-server

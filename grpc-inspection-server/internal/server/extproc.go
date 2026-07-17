@@ -73,25 +73,47 @@ func headerValue(headers map[string]string, key string) string {
 	return ""
 }
 
-func headersToMap(headers []*corev3.HeaderValue) map[string]string {
-	if len(headers) == 0 {
-		return nil
+func payloadTypeToFrameType(pType inspector.PayloadType) string {
+	switch pType {
+	case inspector.RequestHeader:
+		return "request_headers"
+	case inspector.RequestBody:
+		return "request_body"
+	case inspector.ResponseHeader:
+		return "response_headers"
+	case inspector.ResponseBody:
+		return "response_body"
+	default:
+		return "unknown"
 	}
-	out := make(map[string]string, len(headers))
-	for _, h := range headers {
-		if h == nil {
-			continue
-		}
-		val := string(h.RawValue)
-		if val == "" {
-			val = h.Value
-		}
-		out[h.Key] = val
-	}
-	return out
 }
 
-func (s *ExtProcServer) emitCaptureEvent(state *streamCaptureState, frameType string, headers map[string]string, body []byte, endOfStream bool, result inspector.Result) {
+func headersToMapAndString(headers []*corev3.HeaderValue) (map[string]string, string) {
+	if len(headers) == 0 {
+		return nil, ""
+	}
+
+	headersMap := make(map[string]string, len(headers))
+	var headerStr strings.Builder
+
+	for _, header := range headers {
+		if header == nil {
+			continue
+		}
+
+		val := string(header.RawValue)
+		if val == "" {
+			val = header.Value
+		}
+
+		headersMap[header.Key] = val
+		fmt.Fprintf(&headerStr, "%s: %s\n", header.Key, val)
+	}
+
+	return headersMap, strings.TrimSpace(headerStr.String())
+}
+
+func (s *ExtProcServer) emitCaptureEvent(state *streamCaptureState, payloadType inspector.PayloadType, headers map[string]string, body string, endOfStream bool, result inspector.Result) {
 	if !state.enabled {
 		return
 	}
@@ -109,12 +131,12 @@ func (s *ExtProcServer) emitCaptureEvent(state *streamCaptureState, frameType st
 		Timestamp:   now,
 		StreamID:    state.streamID,
 		RequestID:   requestID,
-		FrameType:   frameType,
+		FrameType:   payloadTypeToFrameType(payloadType),
 		FrameSeq:    state.frameSeq.Add(1),
 		EndOfStream: endOfStream,
 		Headers:     headers,
-		Body:        string(body),
-		BodySize:    len(body),
+		Body:        body,
+		BodySize:    len([]byte(body)),
 		Decision:    result.String(),
 		Blocked:     result == inspector.Block,
 		Warned:      result == inspector.Warn,
@@ -166,36 +188,20 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 		var payloadType inspector.PayloadType
 		var payloadStr string
 		var endOfStream bool
-		var frameType string
 		var frameHeaders map[string]string
-		var frameBody []byte
 
 		switch payload := req.Request.(type) {
 		case *extProcPb.ProcessingRequest_RequestHeaders:
 			slog.Debug("Processing Request Headers")
-			var headerStr strings.Builder
-			headersMap := headersToMap(payload.RequestHeaders.Headers.Headers)
+			headersMap, headersStr := headersToMapAndString(payload.RequestHeaders.Headers.Headers)
 
-			// Reconstruct headers into a single string for inspection.
-			for _, header := range payload.RequestHeaders.Headers.Headers {
-				if header == nil {
-					continue
-				}
-				val := string(header.RawValue)
-				if val == "" {
-					val = header.Value
-				}
-				fmt.Fprintf(&headerStr, "%s: %s\n", header.Key, val)
-
-				if strings.EqualFold(header.Key, "pragma") && strings.EqualFold(val, "akamai-x-get-service") {
-					streamContext.ResponseHeaders["akamai-x-service"] = "agentic protection grpc inspection server"
-				}
+			if strings.EqualFold(headerValue(headersMap, "pragma"), "akamai-x-get-service") {
+				streamContext.ResponseHeaders["akamai-x-service"] = "agentic protection grpc inspection server"
 			}
 
-			payloadStr = strings.TrimSpace(headerStr.String())
+			payloadStr = headersStr
 			payloadType = inspector.RequestHeader
 			endOfStream = payload.RequestHeaders.EndOfStream
-			frameType = "request_headers"
 			frameHeaders = headersMap
 			slog.Debug("Request Headers Content", "headers", payloadStr)
 
@@ -208,44 +214,25 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			payloadStr = string(payload.RequestBody.Body)
 			payloadType = inspector.RequestBody
 			endOfStream = payload.RequestBody.EndOfStream
-			frameType = "request_body"
-			frameBody = payload.RequestBody.Body
 			slog.Debug("Request Body Content", "body", payloadStr)
 
 		case *extProcPb.ProcessingRequest_ResponseHeaders:
 			slog.Debug("Processing Response Headers")
-			var headerStr strings.Builder
-			headersMap := headersToMap(payload.ResponseHeaders.Headers.Headers)
-
-			// Reconstruct headers into a single string for inspection.
-			for _, header := range payload.ResponseHeaders.Headers.Headers {
-				if header == nil {
-					continue
-				}
-				val := string(header.RawValue)
-				if val == "" {
-					val = header.Value
-				}
-				fmt.Fprintf(&headerStr, "%s: %s\n", header.Key, val)
-
-				if strings.EqualFold(header.Key, "content-encoding") {
-					streamContext.ContentEncoding = val
-				}
-			}
+			headersMap, headersStr := headersToMapAndString(payload.ResponseHeaders.Headers.Headers)
+			streamContext.ContentEncoding = headerValue(headersMap, "content-encoding")
 
 			decompressor = encoding.New(streamContext.ContentEncoding)
 
-			payloadStr = strings.TrimSpace(headerStr.String())
+			payloadStr = headersStr
 			payloadType = inspector.ResponseHeader
 			endOfStream = payload.ResponseHeaders.EndOfStream
-			frameType = "response_headers"
 			frameHeaders = headersMap
 			slog.Debug("Response Headers Content", "headers", payloadStr)
 
 		case *extProcPb.ProcessingRequest_ResponseBody:
 			slog.Debug("Processing Response Body")
 			rawBytes := payload.ResponseBody.Body
-			endOfStream := payload.ResponseBody.EndOfStream
+			endOfStream = payload.ResponseBody.EndOfStream
 
 			if decompressor == nil {
 				decompressor = encoding.New(streamContext.ContentEncoding)
@@ -261,8 +248,6 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 
 			payloadType = inspector.ResponseBody
 			endOfStream = payload.ResponseBody.EndOfStream
-			frameType = "response_body"
-			frameBody = payload.ResponseBody.Body
 			slog.Debug("Response Body Content", "body", payloadStr)
 
 		default:
@@ -281,6 +266,6 @@ func (s *ExtProcServer) Process(stream extProcPb.ExternalProcessor_ProcessServer
 			return err
 		}
 
-		s.emitCaptureEvent(captureState, frameType, frameHeaders, frameBody, endOfStream, result)
+		s.emitCaptureEvent(captureState, payloadType, frameHeaders, payloadStr, endOfStream, result)
 	}
 }

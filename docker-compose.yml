@@ -1,6 +1,17 @@
 version: "3.9"
 
 services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: agentic
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   redpanda:
     image: redpandadata/redpanda:v24.2.8
     command:
@@ -40,3 +51,26 @@ services:
       - "8082:8082"
     depends_on:
       - redpanda
+
+  consumer:
+    build:
+      context: ./consumer
+    restart: unless-stopped
+    environment:
+      MIGRATIONS_DIR: /app/migrations
+      KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      KAFKA_TOPIC: envoy.capture.events
+      KAFKA_GROUP_ID: agentic-consumer
+      POSTGRES_DSN: postgresql://postgres:postgres@postgres:5432/agentic
+      EMBED_MODEL_NAME: nomic-ai/nomic-embed-text-v1
+      EMBED_BATCH_SIZE: "32"
+      DB_BATCH_SIZE: "256"
+    volumes:
+      - ./scripts:/app/scripts:ro
+      - ./data:/app/data:ro
+    depends_on:
+      - redpanda
+      - postgres
+
+volumes:
+  pgdata:
