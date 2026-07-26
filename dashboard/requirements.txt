@@ -1,0 +1,8 @@
+streamlit==1.38.0
+psycopg[binary]==3.2.9
+pgvector==0.3.5
+numpy==2.0.2
+pandas==2.2.2
+plotly==5.24.1
+scikit-learn==1.5.1
+umap-learn==0.5.6

@@ -5,11 +5,13 @@ LIMIT ?= 5000
 CYCLES ?= 5000
 SEED ?= 42
 
-.PHONY: up down logs ps venv generate publish verify query-nearest query-clusters demo reset acceptance
+.PHONY: up down logs ps venv generate publish verify query-nearest query-clusters demo reset acceptance \
+	detector-logs dashboard-logs drift-events drift-acceptance dashboard-demo open-dashboard \
+	wait-ingestion wait-baseline
 
-## Start postgres, redpanda, kafka-bridge and the consumer
+## Start the full stack: postgres, redpanda, kafka-bridge, consumer, detector, dashboard
 up:
-	docker compose up -d --build postgres redpanda kafka-bridge consumer
+	docker compose up -d --build postgres redpanda kafka-bridge consumer detector dashboard
 
 ## Stop all services (keeps the postgres volume)
 down:
@@ -18,6 +20,14 @@ down:
 ## Tail consumer logs
 logs:
 	docker compose logs -f consumer
+
+## Tail detector logs (baseline + online scoring job output)
+detector-logs:
+	docker compose logs -f detector
+
+## Tail dashboard logs
+dashboard-logs:
+	docker compose logs -f dashboard
 
 ps:
 	docker compose ps
@@ -50,18 +60,58 @@ query-nearest:
 query-clusters:
 	docker compose exec consumer python scripts/query.py cluster-sizes --k $(CLUSTERS) --limit $(LIMIT)
 
+## Poll events_raw until the row count stops changing (ingestion complete).
+## A fixed sleep isn't reliable here -- embedding 10k events on CPU can take
+## several minutes, and how long varies by machine, so this polls actual
+## state instead of guessing a duration.
+wait-ingestion:
+	@echo "waiting for ingestion to settle (can take several minutes on CPU)..."
+	@prev=-1; stable=0; \
+	while [ $$stable -lt 3 ]; do \
+		count=$$(docker compose exec -T postgres psql -U postgres -d agentic -t -c "select count(*) from events_raw;" 2>/dev/null | tr -d ' '); \
+		count=$${count:-0}; \
+		if [ "$$count" = "$$prev" ] && [ "$$count" -gt 0 ]; then stable=$$((stable+1)); else stable=0; fi; \
+		prev=$$count; \
+		sleep 5; \
+	done; \
+	echo "ingestion settled at $$prev rows"
+
+## Poll detector logs until the first baseline computation completes.
+wait-baseline:
+	@echo "waiting for the detector's first baseline pass..."
+	@until docker compose logs detector --no-log-prefix 2>/dev/null | grep -q "baseline updated"; do sleep 5; done
+	@echo "baseline established"
+
 ## Full run: start services, generate + publish data, verify ingestion, run both queries
-demo: up generate publish
-	@echo "waiting for the consumer to catch up..."
-	@sleep 20
+demo: up generate publish wait-ingestion
 	$(MAKE) verify
 	$(MAKE) query-nearest
 	$(MAKE) query-clusters
 
-## Automated pass/fail check for all 4 acceptance criteria (ingestion loss,
-## nearest-neighbor sanity, dataset cohorts, drift detectability)
+## Automated pass/fail check for all 4 Week 4 acceptance criteria (ingestion loss,
+## nearest-neighbor sanity, dataset cohorts, drift detectability via similarity search)
 acceptance:
 	docker compose exec consumer python scripts/validate.py
+
+## Row count in drift_events, to eyeball what the detector has flagged so far
+drift-events:
+	docker compose exec postgres psql -U postgres -d agentic -c \
+		"select session_id, cohort, distance, threshold, turn_count, worst_event_ts from drift_events order by distance desc limit 20;"
+
+## Automated pass/fail check for the Week 5 drift-detector acceptance criteria
+## (baseline exists, at least one session flagged, at least one true positive)
+drift-acceptance:
+	docker compose exec detector python scripts/validate_drift.py
+
+## Open the Streamlit dashboard in your browser (macOS)
+open-dashboard:
+	open http://localhost:8501 2>/dev/null || echo "Visit http://localhost:8501"
+
+## Full Week 5 run: start the stack, load the synthetic dataset, wait for the
+## detector's first pass, then check + open the dashboard
+dashboard-demo: up generate publish wait-ingestion wait-baseline
+	$(MAKE) drift-acceptance
+	$(MAKE) open-dashboard
 
 ## Danger: drops the postgres volume, wiping all ingested data
 reset:

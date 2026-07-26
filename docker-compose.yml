@@ -72,5 +72,35 @@ services:
       - redpanda
       - postgres
 
+  detector:
+    build:
+      context: ./detector
+    restart: unless-stopped
+    environment:
+      POSTGRES_DSN: postgresql://postgres:postgres@postgres:5432/agentic
+      BASELINE_FRACTION: "0.5"
+      DRIFT_SIGMA_MULTIPLIER: "2.0"
+      BASELINE_CRON: "0 2 * * *"
+      ONLINE_INTERVAL_SECONDS: "30"
+      RUN_IMMEDIATELY_ON_STARTUP: "true"
+    volumes:
+      - ./scripts:/app/scripts:ro
+    depends_on:
+      - postgres
+
+  dashboard:
+    build:
+      context: ./dashboard
+    restart: unless-stopped
+    environment:
+      POSTGRES_DSN: postgresql://postgres:postgres@postgres:5432/agentic
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./dashboard:/app:ro
+    depends_on:
+      - postgres
+      - detector
+
 volumes:
   pgdata:

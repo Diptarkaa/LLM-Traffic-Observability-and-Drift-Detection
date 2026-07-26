@@ -33,10 +33,15 @@ def nearest_prompts(query_text: str, k: int) -> None:
     with psycopg.connect(dsn()) as conn:
         register_vector(conn)
         with conn.cursor() as cur:
-            # Default ivfflat.probes=1 only scans the single nearest list; with
-            # lists=100 over a few thousand rows that's too coarse and can miss
-            # minority cohorts (e.g. drift) entirely. Widen the search.
-            cur.execute("SET ivfflat.probes = 10")
+            # Table switched from ivfflat to HNSW (see consumer/migrations/
+            # 002_switch_to_hnsw_index.sql and 003_tune_hnsw_build_params.sql).
+            # Default hnsw.ef_search=40 is tuned for far larger corpora than
+            # this table's actual size and can silently return a worse match
+            # than the true nearest neighbor -- no error, just quietly wrong
+            # results. 100 gives comfortable headroom above what testing
+            # showed was needed after the 003 build-quality fix, at
+            # negligible cost for this query volume.
+            cur.execute("SET hnsw.ef_search = 100")
             cur.execute(
                 """
                 SELECT request_id, kafka_ts, route, session_id, cohort,

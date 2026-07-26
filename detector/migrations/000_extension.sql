@@ -1,0 +1,18 @@
+-- 001 (and now 002) create VECTOR(768) columns, but nothing ever guaranteed
+-- the `vector` extension exists before detector's migrations run -- that
+-- silently depended on consumer's migration 001 (which does CREATE EXTENSION)
+-- having already run first. The two components start as independent
+-- containers with no ordering between them, and both compete for the same
+-- shared advisory lock (see detector/detector/db.py's _MIGRATION_LOCK_KEY --
+-- identical string in consumer, deliberately, so the lock actually serializes
+-- across both). Whichever wins the lock race runs first; if detector wins it
+-- on a fresh database, its own CREATE TABLE ... VECTOR(768) fails with
+-- "type vector does not exist" before consumer ever gets a turn. Observed
+-- live on a fresh `docker compose down -v && make up` -- it "worked" only
+-- because the crash triggered a container restart, and by the retry consumer
+-- had caught up. Numbered 000 (sorts before 001) so this is the very first
+-- statement detector ever runs, making it self-sufficient regardless of
+-- which component wins the startup race. Safe to run redundantly alongside
+-- consumer's own copy -- IF NOT EXISTS, and the shared lock means the two
+-- components' migration runs never overlap anyway.
+CREATE EXTENSION IF NOT EXISTS vector;

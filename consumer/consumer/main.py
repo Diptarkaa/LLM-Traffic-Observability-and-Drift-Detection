@@ -49,7 +49,7 @@ def main() -> None:
 
     store = PgStore(cfg.postgres_dsn)
     migrations_dir = Path(os.environ.get("MIGRATIONS_DIR", Path(__file__).resolve().parents[1] / "migrations"))
-    store.run_migrations(migrations_dir)
+    store.run_migrations(migrations_dir, component="consumer")
 
     embedder = NomicEmbedder(cfg.embed_model_name, batch_size=cfg.embed_batch_size)
     consumer = _build_consumer(cfg)

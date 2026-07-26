@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 from sentence_transformers import SentenceTransformer
 
 
@@ -11,12 +12,18 @@ class NomicEmbedder:
     def _encode(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        vectors = self.model.encode(
-            texts,
-            batch_size=self.batch_size,
-            show_progress_bar=False,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
+        # encode()'s declared return type is a Union that includes torch.Tensor
+        # (no .astype()), even though convert_to_numpy=True guarantees an
+        # ndarray at runtime -- np.asarray narrows it back to ndarray for the
+        # type checker without changing behavior.
+        vectors = np.asarray(
+            self.model.encode(
+                texts,
+                batch_size=self.batch_size,
+                show_progress_bar=False,
+                convert_to_numpy=True,
+                normalize_embeddings=True,
+            )
         )
         return [row.astype(float).tolist() for row in vectors]
 

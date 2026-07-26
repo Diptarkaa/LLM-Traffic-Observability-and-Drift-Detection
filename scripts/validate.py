@@ -61,9 +61,11 @@ def main() -> None:
     with psycopg.connect(DSN) as conn:
         register_vector(conn)
         with conn.cursor() as cur:
-            # Same as scripts/query.py: widen ivfflat probing so minority
-            # cohorts (drift) aren't missed by the default probes=1.
-            cur.execute("SET ivfflat.probes = 10")
+            # Same as scripts/query.py: table is HNSW now, not ivfflat --
+            # widen ef_search so results match the true nearest neighbor
+            # rather than a default-tuned approximation. See consumer/
+            # migrations/003_tune_hnsw_build_params.sql for the full story.
+            cur.execute("SET hnsw.ef_search = 100")
 
             # --- Criterion: consumer ingests every event without loss ---
             cur.execute("select count(*) from events_raw")

@@ -14,6 +14,46 @@
 - `data/synth_generator.py`
 - `scripts/query.py`
 
+## PR review fixes (post-merge follow-up)
+
+Two issues caught in review, both fixed via new migrations rather than
+editing `001` in place (migrations are treated as immutable once applied --
+see `consumer/consumer/db.py`'s ledger for why):
+
+**`consumer/migrations/002_switch_to_hnsw_index.sql` +
+`003_tune_hnsw_build_params.sql`** -- `001`'s ivfflat indexes were built on
+an empty table (before the consumer had written any rows). ivfflat computes
+its cluster centroids from whatever data exists at build time, so this
+produced a degenerate index with no scheduled reindex to fix it -- fine for
+a one-shot demo bulk-load, silently wrong for a consumer running against
+continuous live traffic. Switched to HNSW, which has no build-order
+sensitivity. Verified empirically across multiple test queries that pgvector's
+default HNSW parameters (tuned for far larger corpora) needed unreasonably
+high query-time `ef_search` to reach correct results at this table's actual
+scale; `003` rebuilds both indexes with `m=32, ef_construction=400`, and
+`scripts/query.py`/`scripts/validate.py` set `hnsw.ef_search=100` per
+session. HNSW build is randomized (layer assignment at insert time), so
+recall varies slightly build-to-build even with fixed parameters -- this was
+tuned by rebuilding and testing repeatedly across 5 diverse queries, not a
+single sample.
+
+**`consumer/consumer/db.py` / `detector/detector/db.py` migration runner** --
+every boot re-executed every `*.sql` file, relying entirely on
+`IF NOT EXISTS` for idempotency. That check isn't atomic across concurrent
+sessions: two replicas starting simultaneously could both pass the existence
+check and race on the actual `CREATE`, one throwing a duplicate-object
+error. There was also no ledger, so the first migration that wasn't a bare
+`IF NOT EXISTS` DDL (like `003` above) would have double-applied or errored
+on every subsequent restart. Fixed with a `pg_advisory_lock` around the
+whole migration-application sequence plus a `schema_migrations(component,
+filename)` ledger table shared across every component that migrates this
+database -- each file now applies exactly once, regardless of replica count.
+Verified by deliberately racing two concurrent migration runs against the
+same component: no errors, exactly one ledger row per file (see git history
+for the test). `component` is a required argument now (`run_migrations(dir,
+component="consumer")`) precisely so two independently-numbered migration
+directories can't collide on filename in the shared ledger.
+
 ## Run End-to-End (local)
 
 From repo root:

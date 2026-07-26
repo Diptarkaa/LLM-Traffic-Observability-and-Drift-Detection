@@ -11,3 +11,12 @@ This repo hosts the code for the exploration and PoC of protection and observabi
 Model in use: `nomic-ai/nomic-embed-text-v1` via sentence-transformers.
 
 Quick docs: `docs/week4-embeddings.md`
+
+## Week 5 Additions (Drift Detector + Dashboard)
+
+- Drift detector: `detector/` (cron-style baseline + online scoring jobs)
+- Dashboard: `dashboard/` (Streamlit: topic clusters, anomaly timeline, session drill-down)
+
+Run with `make up` then `make generate && make publish`, or `make dashboard-demo` for the full flow. Dashboard at http://localhost:8501.
+
+Quick docs: `docs/week5-drift-dashboard.md`
