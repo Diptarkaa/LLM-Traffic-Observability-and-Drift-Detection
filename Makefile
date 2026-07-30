@@ -76,11 +76,24 @@ wait-ingestion:
 	done; \
 	echo "ingestion settled at $$prev rows"
 
-## Poll detector logs until the first baseline computation completes.
+## Poll detector logs until the first baseline computation completes, AND
+## until the online-scoring job has run at least once AFTER that -- the
+## online job runs on its own schedule (ONLINE_INTERVAL_SECONDS, default
+## 30s) and can fire moments before the baseline finishes, so "a baseline
+## exists" alone doesn't guarantee anything has actually been scored against
+## it yet (observed live: a `drift-acceptance` run right after "baseline
+## updated" appeared still showed 0 flagged sessions).
 wait-baseline:
 	@echo "waiting for the detector's first baseline pass..."
 	@until docker compose logs detector --no-log-prefix 2>/dev/null | grep -q "baseline updated"; do sleep 5; done
-	@echo "baseline established"
+	@echo "baseline established, waiting for the next online-scoring pass..."
+	@before=$$(docker compose logs detector --no-log-prefix 2>/dev/null | grep -c "running online scoring job"); \
+	after=$$before; \
+	while [ "$$after" -le "$$before" ]; do \
+		sleep 5; \
+		after=$$(docker compose logs detector --no-log-prefix 2>/dev/null | grep -c "running online scoring job"); \
+	done
+	@echo "online scoring has run against the current baseline"
 
 ## Full run: start services, generate + publish data, verify ingestion, run both queries
 demo: up generate publish wait-ingestion
