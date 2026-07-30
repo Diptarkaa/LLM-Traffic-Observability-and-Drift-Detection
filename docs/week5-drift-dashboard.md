@@ -78,7 +78,9 @@ per-cluster centroid/variance live in `route_baseline_clusters`, one row per
 (`_MIN_SAMPLES_PER_CLUSTER = 30` in `baseline.py`) so a small route falls back
 toward fewer clusters (down to 1, the old behavior) rather than fitting
 clusters from too few points. `n_clusters=4` is a reasonable starting point,
-not yet swept the way `sigma_multiplier` was.
+not yet swept the way `sigma_multiplier` was -- and see "Known limitations"
+below: the fit itself isn't run-to-run reproducible yet, so a sweep isn't
+meaningful until that's fixed first.
 
 **Diagonal Mahalanobis, not full Mahalanobis.** Full Mahalanobis distance
 needs an invertible 768x768 covariance matrix. With ~2,500 baseline samples
@@ -187,3 +189,36 @@ cleanly with no crash.
   growing; a continuously-streaming production deployment would need a
   different signal (e.g. a fixed startup grace period) since embedding
   counts never "settle" in steady state.
+- **The multi-cluster baseline fit is not run-to-run reproducible, which
+  makes the 80/80 (100%) recall number above one particular outcome, not a
+  stable property of `n_clusters=4`.** `baseline.py` fits `MiniBatchKMeans`
+  with a fixed `random_state=42`, but `db.py`'s `fetch_embeddings` has no
+  `ORDER BY`, so the row order Postgres returns for the same query is not
+  guaranteed across executions -- and `MiniBatchKMeans` draws its sequential
+  mini-batches from whatever order the input array is in, so a fixed seed
+  does not make the fit deterministic against reordered input. Verified by
+  re-fitting the *same* `n_clusters=4` config against the *same* baseline
+  window (2,511 samples pulled from the live demo stack), varying only the
+  input row order:
+
+  | input order (shuffle seed) | threshold | drift recall | normal false positives |
+  |---|---|---|---|
+  | 0 | 31.31 | 74/80 | 33/300 |
+  | 1 | 31.56 | 44/80 | 36/300 |
+  | 2 | 32.05 | 43/80 | 27/300 |
+  | 3 | 31.74 | 46/80 | 30/300 |
+  | 4 | 31.48 | 77/80 | 10/300 |
+
+  Same code, same data, same nominal seed -- drift recall alone swings from
+  43/80 (54%) to 77/80 (96%). In a real deployment, every nightly baseline
+  recompute could land anywhere in that range against identical traffic,
+  with no code change and no alert that anything shifted. This also means
+  the open `n_clusters` / `DRIFT_MEMORY_SIMILARITY_THRESHOLD` sweep
+  mentioned above isn't meaningful to run until this is fixed first --
+  right now it would be measuring clustering luck, not the parameter.
+  Likely fix (not yet implemented): `MiniBatchKMeans` exists to handle
+  data too large to fit in memory, which doesn't apply here (~2,500
+  points, run once a night, not on any latency-sensitive path) -- swapping
+  to full-batch `KMeans` with multiple restarts (picking the best-inertia
+  solution) would remove the input-order sensitivity entirely instead of
+  just papering over it with an `ORDER BY`.
