@@ -19,6 +19,14 @@ The system captures LLM traffic using Envoy AI Gateway, streams events through K
 - Interactive Streamlit dashboard for visualization and analysis
 - Fully containerized deployment using Docker Compose
 
+## Architecture and Workflow
+
+Traffic is captured downstream of the Envoy gateway's ext_proc inspection layer via an asynchronous HTTP bridge, decoupling capture from the real-time request path entirely — a sidecar or downstream outage never blocks user traffic. Captured events are published to a Kafka/Redpanda event bus with at-least-once delivery semantics. A Python consumer reads this stream, embeds every prompt and completion using nomic-embed-text, and persists both raw events and embeddings to PostgreSQL with pgvector, indexed via HNSW for incremental, production-safe similarity search.
+
+A drift detector runs two independent, parallel detection signals: a statistical branch computing diagonal Mahalanobis distance against per-route baselines modeled as multiple k-means sub-clusters (rather than a single centroid, to accommodate multi-modal normal traffic); and a historical branch that permanently retains confirmed-attack embeddings and matches new traffic against them via nearest-neighbor similarity, independent of baseline recompute timing. Detected anomalies are written to a dedicated events table and surfaced through a Streamlit dashboard covering topic clustering, an anomaly timeline, and per-session drill-down.
+
+The full stack — event bus, storage, detection, and dashboard — deploys as a single Docker Compose stack.
+
 ## Tech Stack
 
 - Envoy AI Gateway
